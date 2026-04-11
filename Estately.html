@@ -589,11 +589,11 @@ function tenureDuration(h) {
 
 // ── Data ───────────────────────────────────────────────────────
 let apartments = [
-  { id:1, name:"Unit 1A", address:"12 Maple Avenue", status:"leased", price:1800, payment:"paid", tenant:"Sarah Mitchell", leaseStart:"2024-03-01", leaseEnd:"2025-03-01",
+  { id:1, name:"Unit 1A", address:"12 Maple Avenue", status:"leased", price:1800, payment:"paid", tenant:"Sarah Mitchell", leaseStart:"2025-11-01", leaseEnd:"2026-02-01",
     history:[
       {tenant:"Tom Baker",      price:1600, from:"2022-01-01", to:"2023-01-01", tenure:"long"},
       {tenant:"Anna Lee",       price:1700, from:"2023-01-15", to:"2024-02-28", tenure:"long"},
-      {tenant:"Sarah Mitchell", price:1800, from:"2024-03-01", to:"2025-03-01", tenure:"long", current:true}
+      {tenant:"Sarah Mitchell", price:1800, from:"2024-03-01", to:"2025-03-01", tenure:"short", current:true}
     ]},
   { id:2, name:"Unit 2B", address:"12 Maple Avenue", status:"ending", price:2100, payment:"paid", tenant:"James Torres", leaseStart:"2024-01-01", leaseEnd:"2025-02-15",
     history:[
@@ -863,8 +863,9 @@ function openDetail(id) {
         </table>`
       : `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:12px 0">No history recorded yet.</p>`}
 
-    <div style="margin-top:24px;display:flex;justify-content:flex-end">
+    <div style="margin-top:24px;display:flex;justify-content:flex-end;gap:10px">
       <button class="btn btn-outline" onclick="closeModal('detail-modal')">Close</button>
+      <button class="btn" onclick="openEditModal(${a.id})">✎ Edit</button>
     </div>
   `;
 
@@ -1113,6 +1114,55 @@ function toggleGroup(id) {
   if(grp) grp.classList.toggle('collapsed');
 }
 
+// ── Edit apartment ─────────────────────────────────────────────
+function openEditModal(id) {
+  const a = apartments.find(x => x.id === id);
+  if (!a) return;
+  closeModal('detail-modal');
+  document.getElementById('e-id').value       = a.id;
+  document.getElementById('e-name').value     = a.name;
+  document.getElementById('e-address').value  = a.address;
+  document.getElementById('e-status').value   = a.status;
+  document.getElementById('e-price').value    = a.price || '';
+  document.getElementById('e-tenant').value   = a.tenant === '—' ? '' : a.tenant;
+  document.getElementById('e-payment').value  = a.payment;
+  document.getElementById('e-start').value    = a.leaseStart || '';
+  document.getElementById('e-end').value      = a.leaseEnd || '';
+  const currentH = a.history.find(h => h.current);
+  document.getElementById('e-tenure').value   = currentH ? inferTenure(currentH) : 'long';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function saveEdit() {
+  const id      = parseInt(document.getElementById('e-id').value);
+  const a       = apartments.find(x => x.id === id);
+  if (!a) return;
+  a.name        = document.getElementById('e-name').value.trim() || a.name;
+  a.address     = document.getElementById('e-address').value.trim() || a.address;
+  a.status      = document.getElementById('e-status').value;
+  a.price       = parseInt(document.getElementById('e-price').value) || 0;
+  a.tenant      = document.getElementById('e-tenant').value.trim() || '—';
+  a.payment     = document.getElementById('e-payment').value;
+  a.leaseStart  = document.getElementById('e-start').value;
+  a.leaseEnd    = document.getElementById('e-end').value;
+  const tenure  = document.getElementById('e-tenure').value;
+  // Update or create the current history entry
+  const currentH = a.history.find(h => h.current);
+  if (currentH) {
+    currentH.tenant  = a.tenant;
+    currentH.price   = a.price;
+    currentH.from    = a.leaseStart || currentH.from;
+    currentH.to      = a.leaseEnd   || currentH.to;
+    currentH.tenure  = tenure;
+  } else if (a.leaseStart) {
+    a.history.push({ tenant: a.tenant, price: a.price, from: a.leaseStart, to: a.leaseEnd, tenure, current: true });
+  }
+  closeModal('edit-modal');
+  updateStats();
+  renderGrid('apt-grid');
+  renderGrid('apt-grid-2');
+}
+
 // ── Dark mode ──────────────────────────────────────────────────
 function toggleDark() {
   document.body.classList.toggle('dark');
@@ -1166,6 +1216,60 @@ if(localStorage.getItem('estately-dark')=== '1') document.body.classList.add('da
     <div class="modal-body">
       <p style="font-size:0.85rem;color:var(--text-mid);margin-bottom:18px">Removing a property will delete <strong>all apartments</strong> at that address.</p>
       <div class="remove-list" id="remove-property-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Apartment</div>
+      <button class="modal-close" onclick="closeModal('edit-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="e-id">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Unit Name</label><input class="form-input" id="e-name" placeholder="e.g. Unit 4B"></div>
+        <div class="form-group"><label class="form-label">Address</label><input class="form-input" id="e-address" placeholder="e.g. 12 Oak Street"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Status</label>
+          <select class="form-input" id="e-status">
+            <option value="leased">Leased</option>
+            <option value="ending">Ending Soon</option>
+            <option value="vacant">Vacant</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Monthly Rent ($)</label><input class="form-input" id="e-price" type="number" placeholder="e.g. 1500"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Current Tenant</label><input class="form-input" id="e-tenant" placeholder="e.g. John Smith"></div>
+        <div class="form-group"><label class="form-label">Tenant Type</label>
+          <select class="form-input" id="e-tenure">
+            <option value="long">Long-Term (6+ months)</option>
+            <option value="short">Short-Term (&lt;6 months)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Payment Status</label>
+          <select class="form-input" id="e-payment">
+            <option value="paid">Paid</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="processing">Processing</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Lease Start</label><input class="form-input" id="e-start" type="date"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Lease End</label><input class="form-input" id="e-end" type="date"></div>
+        <div class="form-group"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-outline" style="flex:1;padding:12px" onclick="closeModal('edit-modal')">Cancel</button>
+        <button class="btn" style="flex:2;padding:12px;font-size:0.95rem" onclick="saveEdit()">Save Changes</button>
+      </div>
     </div>
   </div>
 </div>
