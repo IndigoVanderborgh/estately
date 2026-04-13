@@ -587,49 +587,29 @@ function tenureDuration(h) {
   return yrs + 'y' + (rem ? ' '+rem+'m' : '');
 }
 
+// ── API ────────────────────────────────────────────────────────
+const API = 'http://127.0.0.1:5000/api';
+
+// Normalize Supabase snake_case to camelCase for the frontend
+function normalize(a) {
+  return {
+    ...a,
+    leaseStart: a.lease_start || '',
+    leaseEnd:   a.lease_end   || '',
+  };
+}
+
 // ── Data ───────────────────────────────────────────────────────
-let apartments = [
-  { id:1, name:"Unit 1A", address:"12 Maple Avenue", status:"leased", price:1800, payment:"paid", tenant:"Sarah Mitchell", leaseStart:"2025-11-01", leaseEnd:"2026-02-01",
-    history:[
-      {tenant:"Tom Baker",      price:1600, from:"2022-01-01", to:"2023-01-01", tenure:"long"},
-      {tenant:"Anna Lee",       price:1700, from:"2023-01-15", to:"2024-02-28", tenure:"long"},
-      {tenant:"Sarah Mitchell", price:1800, from:"2024-03-01", to:"2025-03-01", tenure:"short", current:true}
-    ]},
-  { id:2, name:"Unit 2B", address:"12 Maple Avenue", status:"ending", price:2100, payment:"paid", tenant:"James Torres", leaseStart:"2024-01-01", leaseEnd:"2025-02-15",
-    history:[
-      {tenant:"Linda Park",   price:1900, from:"2021-06-01", to:"2022-06-01", tenure:"long"},
-      {tenant:"James Torres", price:2100, from:"2024-01-01", to:"2025-02-15", tenure:"long", current:true}
-    ]},
-  { id:3, name:"Unit 3C", address:"8 Birch Lane", status:"vacant", price:1650, payment:"unpaid", tenant:"—", leaseStart:"", leaseEnd:"",
-    history:[
-      {tenant:"Marcus Webb", price:1500, from:"2023-02-01", to:"2024-01-31", tenure:"long"},
-      {tenant:"Carla Ruiz",  price:1600, from:"2024-02-01", to:"2024-04-30", tenure:"short"}
-    ]},
-  { id:4, name:"Unit 4D", address:"8 Birch Lane", status:"leased", price:2400, payment:"processing", tenant:"Emma Holloway", leaseStart:"2024-07-01", leaseEnd:"2026-06-30",
-    history:[
-      {tenant:"Derek Finn",    price:2200, from:"2022-07-01", to:"2023-06-30", tenure:"long"},
-      {tenant:"Emma Holloway", price:2400, from:"2024-07-01", to:"2026-06-30", tenure:"long", current:true}
-    ]},
-  { id:5, name:"Unit 5E", address:"21 Cedar Court", status:"leased", price:1950, payment:"unpaid", tenant:"Oliver Grant", leaseStart:"2024-09-01", leaseEnd:"2025-08-31",
-    history:[
-      {tenant:"Nina Patel",   price:1800, from:"2023-09-01", to:"2024-08-31", tenure:"long"},
-      {tenant:"Oliver Grant", price:1950, from:"2024-09-01", to:"2025-08-31", tenure:"long", current:true}
-    ]},
-  { id:6, name:"Unit 6F", address:"21 Cedar Court", status:"vacant", price:1700, payment:"unpaid", tenant:"—", leaseStart:"", leaseEnd:"",
-    history:[
-      {tenant:"Fiona Walsh",  price:1600, from:"2023-03-01", to:"2023-05-31", tenure:"short"},
-      {tenant:"Ben Carter",   price:1650, from:"2023-07-01", to:"2024-09-30", tenure:"long"}
-    ]}
-];
+let apartments = [];
 
 let currentFilter = 'all';
 let activeCharts  = [];
 
 // ── Helpers ────────────────────────────────────────────────────
 function statusLabel(s) {
-  if(s==='leased') return '<span class="status-badge status-leased">● Leased</span>';
-  if(s==='ending') return '<span class="status-badge status-ending">◐ Ending Soon</span>';
-  return '<span class="status-badge status-vacant">○ Vacant</span>';
+  if(s==='leased') return '<span class="status-badge status-leased">Leased</span>';
+  if(s==='ending') return '<span class="status-badge status-ending">Ending Soon</span>';
+  return '<span class="status-badge status-vacant">Vacant</span>';
 }
 function paymentPill(p) {
   if(p==='paid')   return `<span class="payment-pill payment-paid"><span class="payment-dot"></span>Paid</span>`;
@@ -959,7 +939,7 @@ function openDetail(id) {
 function openAddModal() { document.getElementById('add-modal').classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-function addApartment() {
+async function addApartment() {
   const name    = document.getElementById('f-name').value.trim();
   const address = document.getElementById('f-address').value.trim();
   if(!name||!address){ alert('Please fill in Unit Name and Address.'); return; }
@@ -970,8 +950,15 @@ function addApartment() {
   const payment = document.getElementById('f-payment').value;
   const start   = document.getElementById('f-start').value;
   const end     = document.getElementById('f-end').value;
-  apartments.push({ id:Date.now(), name, address, status, price, payment, tenant, leaseStart:start, leaseEnd:end,
-    history: start?[{tenant,price,from:start,to:end,tenure,current:true}]:[] });
+  const history = start ? [{tenant,price,from:start,to:end,tenure,current:true}] : [];
+  const res  = await fetch(`${API}/apartments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, address, status, price, payment, tenant,
+      lease_start: start||null, lease_end: end||null, history })
+  });
+  const data = await res.json();
+  apartments.push(normalize(data[0]));
   closeModal('add-modal');
   ['f-name','f-address','f-price','f-tenant','f-start','f-end'].forEach(i=>document.getElementById(i).value='');
   updateStats(); renderGrid('apt-grid');
@@ -1089,7 +1076,8 @@ function openRemoveModal() {
   document.getElementById('remove-modal').classList.add('open');
 }
 
-function removeApartment(id) {
+async function removeApartment(id) {
+  await fetch(`${API}/apartments/${id}`, { method: 'DELETE' });
   apartments = apartments.filter(a => a.id !== id);
   const el = document.getElementById('ri-' + id);
   if(el) el.remove();
@@ -1157,6 +1145,18 @@ function saveEdit() {
   } else if (a.leaseStart) {
     a.history.push({ tenant: a.tenant, price: a.price, from: a.leaseStart, to: a.leaseEnd, tenure, current: true });
   }
+  // Save to backend
+  fetch(`${API}/apartments/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: a.name, address: a.address, status: a.status,
+      price: a.price, payment: a.payment, tenant: a.tenant,
+      lease_start: a.leaseStart || null,
+      lease_end:   a.leaseEnd   || null,
+      history: a.history
+    })
+  });
   closeModal('edit-modal');
   updateStats();
   renderGrid('apt-grid');
@@ -1169,7 +1169,22 @@ function toggleDark() {
   localStorage.setItem('estately-dark', document.body.classList.contains('dark') ? '1' : '0');
 }
 if(localStorage.getItem('estately-dark')=== '1') document.body.classList.add('dark');
-</script>
+
+// ── Load data from Flask ───────────────────────────────────────
+async function loadApartments() {
+  try {
+    const res  = await fetch(`${API}/apartments`);
+    const data = await res.json();
+    apartments = data.map(normalize);
+    updateStats();
+    renderGrid('apt-grid');
+  } catch(e) {
+    console.error('Could not connect to backend:', e);
+    alert('Could not connect to the Flask backend. Make sure it is running on port 5000.');
+  }
+}
+
+loadApartments();</script>
 <!-- REMOVE MODAL -->
 <div class="modal-overlay" id="remove-modal">
   <div class="modal" style="max-width:480px">
