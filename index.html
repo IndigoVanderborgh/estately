@@ -425,6 +425,10 @@
     <span class="toggle-label">Dark Mode</span>
     <div class="toggle-track"><div class="toggle-thumb"></div></div>
   </button>
+  <button class="dark-toggle" onclick="logout()" style="color:rgba(237,224,212,0.6)">
+    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:0.7;flex-shrink:0"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    <span class="toggle-label">Sign Out</span>
+  </button>
   <div class="sidebar-footer">© 2025 Estately</div>
 </aside>
 
@@ -1236,6 +1240,11 @@ function checkAuth() {
     document.querySelector('.sidebar').style.display = 'none';
     document.querySelector('.main').style.display = 'none';
   }
+}
+
+function logout() {
+  localStorage.removeItem('estately-token');
+  location.reload();
 }
 
 checkAuth();</script>
