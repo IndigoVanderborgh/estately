@@ -14,6 +14,16 @@ supabase = create_client(
     os.getenv('SUPABASE_KEY')
 )
 
+def get_user_id():
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not token:
+        return None
+    try:
+        user = supabase.auth.get_user(token)
+        return user.user.id
+    except:
+        return None
+
 # ── Test route ─────────────────────────────────────────────────
 @app.route('/api/health')
 def health():
@@ -22,33 +32,49 @@ def health():
 # ── Get all apartments ─────────────────────────────────────────
 @app.route('/api/apartments')
 def get_apartments():
-    response = supabase.table('apartments').select('*').execute()
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    response = supabase.table('apartments').select('*').eq('user_id', user_id).execute()
     return jsonify(response.data)
 
 # ── Get single apartment ───────────────────────────────────────
 @app.route('/api/apartments/<int:id>')
 def get_apartment(id):
-    response = supabase.table('apartments').select('*').eq('id', id).execute()
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    response = supabase.table('apartments').select('*').eq('id', id).eq('user_id', user_id).execute()
     return jsonify(response.data[0] if response.data else {})
 
 # ── Add apartment ──────────────────────────────────────────────
 @app.route('/api/apartments', methods=['POST'])
 def add_apartment():
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
     data = request.json
+    data['user_id'] = user_id
     response = supabase.table('apartments').insert(data).execute()
     return jsonify(response.data)
 
 # ── Update apartment ───────────────────────────────────────────
 @app.route('/api/apartments/<int:id>', methods=['PUT'])
 def update_apartment(id):
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
     data = request.json
-    response = supabase.table('apartments').update(data).eq('id', id).execute()
+    response = supabase.table('apartments').update(data).eq('id', id).eq('user_id', user_id).execute()
     return jsonify(response.data)
 
 # ── Delete apartment ───────────────────────────────────────────
 @app.route('/api/apartments/<int:id>', methods=['DELETE'])
 def delete_apartment(id):
-    response = supabase.table('apartments').delete().eq('id', id).execute()
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    response = supabase.table('apartments').delete().eq('id', id).eq('user_id', user_id).execute()
     return jsonify({'success': True})
 
 # ── Login ──────────────────────────────────────────────────────

@@ -1099,7 +1099,7 @@ function openRemoveModal() {
 }
 
 async function removeApartment(id) {
-  await fetch(`${API}/apartments/${id}`, { method: 'DELETE' });
+  await fetch(`${API}/apartments/${id}`, { method: 'DELETE', headers: getHeaders() });
   apartments = apartments.filter(a => a.id !== id);
   const el = document.getElementById('ri-' + id);
   if(el) el.remove();
@@ -1170,7 +1170,7 @@ function saveEdit() {
   // Save to backend
   fetch(`${API}/apartments/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({
       name: a.name, address: a.address, status: a.status,
       price: a.price, payment: a.payment, tenant: a.tenant,
@@ -1192,10 +1192,19 @@ function toggleDark() {
 }
 if(localStorage.getItem('estately-dark')=== '1') document.body.classList.add('dark');
 
+// get headers for user separation
+function getHeaders() {
+  const token = localStorage.getItem('estately-token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+}
+
 // ── Load data from Flask ───────────────────────────────────────
 async function loadApartments() {
   try {
-    const res  = await fetch(`${API}/apartments`);
+    const res  = await fetch(`${API}/apartments`, { headers: getHeaders() });
     const data = await res.json();
     apartments = data.map(normalize);
     updateStats();
@@ -1212,7 +1221,7 @@ async function login() {
   const password = document.getElementById('login-password').value;
   const res  = await fetch(`${API}/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({ email, password })
   });
   const data = await res.json();
