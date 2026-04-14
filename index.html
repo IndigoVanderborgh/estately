@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EstatEase – Property Manager</title>
+<title>Estately – Property Manager</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -382,6 +382,24 @@
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--cream);">
+  <div style="background:var(--white);border-radius:20px;padding:40px;width:100%;max-width:380px;box-shadow:0 8px 40px var(--shadow);">
+    <h1 style="font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:4px">Estate<span style="color:var(--brown-mid)">ly</span></h1>
+    <p style="font-size:0.82rem;color:var(--text-mid);margin-bottom:28px;letter-spacing:1px;text-transform:uppercase">Property Manager</p>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="login-email" type="email" placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="login-password" type="password" placeholder="••••••••">
+    </div>
+    <p id="login-error" style="color:#9b3535;font-size:0.82rem;margin-bottom:12px;display:none">Invalid email or password.</p>
+    <button class="btn" style="width:100%;padding:12px;font-size:0.95rem" onclick="login()">Sign In</button>
+  </div>
+</div>
 
 <aside class="sidebar">
   <div class="logo">
@@ -1184,7 +1202,43 @@ async function loadApartments() {
   }
 }
 
-loadApartments();</script>
+// ── Auth ───────────────────────────────────────────────────────
+async function login() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const res  = await fetch(`${API}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await res.json();
+  if (data.token) {
+    localStorage.setItem('estately-token', data.token);
+    showApp();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.querySelector('.sidebar').style.display = 'flex';
+  document.querySelector('.main').style.display = 'block';
+  loadApartments();
+}
+
+function checkAuth() {
+  const token = localStorage.getItem('estately-token');
+  if (token) {
+    showApp();
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.querySelector('.sidebar').style.display = 'none';
+    document.querySelector('.main').style.display = 'none';
+  }
+}
+
+checkAuth();</script>
 <!-- REMOVE MODAL -->
 <div class="modal-overlay" id="remove-modal">
   <div class="modal" style="max-width:480px">

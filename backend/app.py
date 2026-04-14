@@ -51,6 +51,21 @@ def delete_apartment(id):
     response = supabase.table('apartments').delete().eq('id', id).execute()
     return jsonify({'success': True})
 
+# ── Login ──────────────────────────────────────────────────────
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    try:
+        response = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+        return jsonify({'token': response.session.access_token})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 401
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
