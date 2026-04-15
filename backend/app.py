@@ -3,6 +3,9 @@ from flask_cors import CORS
 from supabase import create_client
 from dotenv import load_dotenv
 import os
+# Testing boto3
+import boto3
+from botocore.client import Config
 
 load_dotenv('../.env')
 
@@ -13,6 +16,16 @@ supabase = create_client(
     os.getenv('SUPABASE_URL'),
     os.getenv('SUPABASE_KEY')
 )
+
+# ── R2 client ──────────────────────────────────────────────────
+r2 = boto3.client(
+    's3',
+    endpoint_url=os.getenv('R2_ENDPOINT'),
+    aws_access_key_id=os.getenv('R2_ACCESS_KEY_ID'),
+    aws_secret_access_key=os.getenv('R2_SECRET_ACCESS_KEY'),
+    config=Config(signature_version='s3v4')
+)
+R2_BUCKET = os.getenv('R2_BUCKET')
 
 def get_user_id():
     token = request.headers.get('Authorization', '').replace('Bearer ', '')
@@ -98,24 +111,25 @@ def upload_lease(id):
     user_id = get_user_id()
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
-    
+
     file = request.files.get('file')
     if not file:
         return jsonify({'error': 'No file provided'}), 400
-    
+
     file_path = f"{user_id}/{id}/{file.filename}"
     file_bytes = file.read()
-    
-    supabase.storage.from_('leases').upload(
-        file_path,
-        file_bytes,
-        {"content-type": file.content_type}
+
+    r2.put_object(
+        Bucket=R2_BUCKET,
+        Key=file_path,
+        Body=file_bytes,
+        ContentType=file.content_type
     )
-    
+
     supabase.table('apartments').update(
         {'lease_doc': file_path}
     ).eq('id', id).eq('user_id', user_id).execute()
-    
+
     return jsonify({'success': True, 'path': file_path})
 
 # ── Get lease download URL ──────────────────────────────────────
@@ -124,14 +138,18 @@ def get_lease(id):
     user_id = get_user_id()
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
-    
+
     response = supabase.table('apartments').select('lease_doc').eq('id', id).eq('user_id', user_id).execute()
     if not response.data or not response.data[0].get('lease_doc'):
         return jsonify({'error': 'No document found'}), 404
-    
+
     file_path = response.data[0]['lease_doc']
-    signed = supabase.storage.from_('leases').create_signed_url(file_path, 300)
-    return jsonify({'url': signed['signedURL']})
+    url = r2.generate_presigned_url(
+        'get_object',
+        Params={'Bucket': R2_BUCKET, 'Key': file_path},
+        ExpiresIn=300
+    )
+    return jsonify({'url': url})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
