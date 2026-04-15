@@ -865,10 +865,23 @@ function openDetail(id) {
         </table>`
       : `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:12px 0">No history recorded yet.</p>`}
 
-    <div style="margin-top:24px;display:flex;justify-content:flex-end;gap:10px">
+  <div style="margin-top:24px;border-top:1px solid rgba(127,85,57,0.1);padding-top:20px">
+    <div class="section-divider" style="margin-top:0">Lease Document</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <label class="btn btn-outline" style="cursor:pointer;margin:0">
+        📎 Upload Lease PDF
+        <input type="file" id="lease-upload" accept=".pdf" style="display:none" onchange="uploadLease(${a.id})">
+      </label>
+      <span id="upload-status" style="font-size:0.82rem;color:var(--text-mid)">
+        ${a.lease_doc ? 'Document on file' : 'No document uploaded yet'}
+      </span>
+      ${a.lease_doc ? `<button class="btn btn-outline" onclick="downloadLease(${a.id})">⬇ View / Download</button>` : ''}
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px">
       <button class="btn btn-outline" onclick="closeModal('detail-modal')">Close</button>
       <button class="btn" onclick="openEditModal(${a.id})">✎ Edit</button>
     </div>
+  </div>
   `;
 
   document.getElementById('detail-modal').classList.add('open');
@@ -1254,6 +1267,48 @@ function checkAuth() {
 function logout() {
   localStorage.removeItem('estately-token');
   location.reload();
+}
+
+async function uploadLease(id) {
+  const input = document.getElementById('lease-upload');
+  const file = input.files[0];
+  if (!file) return;
+
+  document.getElementById('upload-status').textContent = 'Uploading...';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const token = localStorage.getItem('estately-token');
+  const res = await fetch(`${API}/apartments/${id}/upload`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: formData
+  });
+
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('upload-status').textContent = 'Document uploaded successfully!';
+    const apt = apartments.find(a => a.id === id);
+    if (apt) apt.lease_doc = data.path;
+  } else {
+    document.getElementById('upload-status').textContent = 'Upload failed. Try again.';
+  }
+}
+
+async function downloadLease(id) {
+  const apt = apartments.find(a => a.id === id);
+  if (!apt || !apt.lease_doc) return;
+
+  const token = localStorage.getItem('estately-token');
+  const res = await fetch(`${API}/apartments/${id}/lease`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  const data = await res.json();
+  if (data.url) {
+    window.open(data.url, '_blank');
+  }
 }
 
 checkAuth();</script>
