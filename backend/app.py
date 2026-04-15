@@ -154,3 +154,11 @@ def get_lease(id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
+@app.route('/api/debug-env')
+def debug_env():
+    return jsonify({
+        'R2_BUCKET': os.getenv('R2_BUCKET'),
+        'R2_ENDPOINT': os.getenv('R2_ENDPOINT'),
+        'R2_ACCESS_KEY_ID': os.getenv('R2_ACCESS_KEY_ID'),
+    })
