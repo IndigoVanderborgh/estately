@@ -116,6 +116,9 @@ def upload_lease(id):
     if not file:
         return jsonify({'error': 'No file provided'}), 400
 
+    from datetime import datetime
+    import json
+
     file_path = f"{user_id}/{id}/{file.filename}"
     file_bytes = file.read()
 
@@ -126,11 +129,50 @@ def upload_lease(id):
         ContentType=file.content_type
     )
 
-    supabase.table('apartments').update(
-        {'lease_doc': file_path}
-    ).eq('id', id).eq('user_id', user_id).execute()
+    # Get current lease_docs array
+    apt = supabase.table('apartments').select('lease_docs, tenant').eq('id', id).eq('user_id', user_id).execute()
+    lease_docs = apt.data[0].get('lease_docs') or []
+    tenant = apt.data[0].get('tenant', '—')
 
-    return jsonify({'success': True, 'path': file_path})
+    # Append new document
+    lease_docs.append({
+        'filename': file.filename,
+        'path': file_path,
+        'uploaded': datetime.utcnow().strftime('%Y-%m-%d'),
+        'tenant': tenant
+    })
+
+    supabase.table('apartments').update({
+        'lease_doc': file_path,
+        'lease_docs': lease_docs
+    }).eq('id', id).eq('user_id', user_id).execute()
+
+    return jsonify({'success': True, 'path': file_path, 'lease_docs': lease_docs})
+
+# ── Delete lease document ───────────────────────────────────────
+@app.route('/api/apartments/<int:id>/lease', methods=['DELETE'])
+def delete_lease(id):
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    file_path = request.json.get('path')
+    if not file_path:
+        return jsonify({'error': 'No path provided'}), 400
+
+    # Delete from R2
+    r2.delete_object(Bucket=R2_BUCKET, Key=file_path)
+
+    # Update lease_docs array in Supabase
+    apt = supabase.table('apartments').select('lease_docs').eq('id', id).eq('user_id', user_id).execute()
+    lease_docs = apt.data[0].get('lease_docs') or []
+    lease_docs = [d for d in lease_docs if d['path'] != file_path]
+
+    supabase.table('apartments').update({
+        'lease_docs': lease_docs
+    }).eq('id', id).eq('user_id', user_id).execute()
+
+    return jsonify({'success': True})
 
 # ── Get lease download URL ──────────────────────────────────────
 @app.route('/api/apartments/<int:id>/lease')
@@ -154,11 +196,3 @@ def get_lease(id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
-
-@app.route('/api/debug-env')
-def debug_env():
-    return jsonify({
-        'R2_BUCKET': os.getenv('R2_BUCKET'),
-        'R2_ENDPOINT': os.getenv('R2_ENDPOINT'),
-        'R2_ACCESS_KEY_ID': os.getenv('R2_ACCESS_KEY_ID'),
-    })
