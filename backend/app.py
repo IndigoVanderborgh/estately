@@ -92,6 +92,47 @@ def login():
     except Exception as e:
         return jsonify({'error': str(e)}), 401
 
+# ── Upload lease document ───────────────────────────────────────
+@app.route('/api/apartments/<int:id>/upload', methods=['POST'])
+def upload_lease(id):
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file_path = f"{user_id}/{id}/{file.filename}"
+    file_bytes = file.read()
+    
+    supabase.storage.from_('leases').upload(
+        file_path,
+        file_bytes,
+        {"content-type": file.content_type}
+    )
+    
+    supabase.table('apartments').update(
+        {'lease_doc': file_path}
+    ).eq('id', id).eq('user_id', user_id).execute()
+    
+    return jsonify({'success': True, 'path': file_path})
+
+# ── Get lease download URL ──────────────────────────────────────
+@app.route('/api/apartments/<int:id>/lease')
+def get_lease(id):
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    response = supabase.table('apartments').select('lease_doc').eq('id', id).eq('user_id', user_id).execute()
+    if not response.data or not response.data[0].get('lease_doc'):
+        return jsonify({'error': 'No document found'}), 404
+    
+    file_path = response.data[0]['lease_doc']
+    signed = supabase.storage.from_('leases').create_signed_url(file_path, 300)
+    return jsonify({'url': signed['signedURL']})
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
