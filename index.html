@@ -1286,34 +1286,16 @@ async function uploadLease(id) {
   const input = document.getElementById('lease-upload');
   const file = input.files[0];
   if (!file) return;
-
   document.getElementById('upload-status').textContent = 'Uploading...';
-
   const formData = new FormData();
   formData.append('file', file);
-
   const token = localStorage.getItem('estately-token');
   const res = await fetch(`${API}/apartments/${id}/upload`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${token}` },
     body: formData
   });
-
-async function setCurrentLease(id, path) {
-  const apt = apartments.find(a => a.id === id);
-  if (!apt) return;
-  apt.lease_docs = apt.lease_docs.map(d => ({ ...d, current: d.path === path }));
-  apt.lease_doc = path;
-  const token = localStorage.getItem('estately-token');
-  await fetch(`${API}/apartments/${id}`, {
-    method: 'PUT',
-    headers: getHeaders(),
-    body: JSON.stringify({ lease_doc: path, lease_docs: apt.lease_docs })
-  });
-  openDetail(id);
-}
-
-const data = await res.json();
+  const data = await res.json();
   if (data.success) {
     document.getElementById('upload-status').textContent = 'Uploaded successfully!';
     const apt = apartments.find(a => a.id === id);
@@ -1321,11 +1303,23 @@ const data = await res.json();
       apt.lease_doc = data.path;
       apt.lease_docs = data.lease_docs;
     }
-    // Refresh the detail modal to show the new document in the table
     openDetail(id);
   } else {
     document.getElementById('upload-status').textContent = 'Upload failed. Try again.';
   }
+}
+
+async function setCurrentLease(id, path) {
+  const apt = apartments.find(a => a.id === id);
+  if (!apt) return;
+  apt.lease_docs = apt.lease_docs.map(d => ({ ...d, current: d.path === path }));
+  apt.lease_doc = path;
+  await fetch(`${API}/apartments/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify({ lease_doc: path, lease_docs: apt.lease_docs })
+  });
+  openDetail(id);
 }
 
 async function downloadLeaseByPath(id, path) {
