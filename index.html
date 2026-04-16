@@ -883,6 +883,7 @@ function openDetail(id) {
           <td>${doc.tenant}</td>
           <td>${doc.uploaded}</td>
           <td style="display:flex;gap:8px">
+            <button class="btn ${doc.current ? '' : 'btn-outline'}" style="padding:4px 10px;font-size:0.75rem" onclick="setCurrentLease(${a.id},'${doc.path}')" title="Mark as current lease">${doc.current ? '★ Current' : '☆ Set Current'}</button>
             <button class="btn btn-outline" style="padding:4px 10px;font-size:0.75rem" onclick="downloadLeaseByPath(${a.id},'${doc.path}')">View</button>
             <button class="btn btn-remove" style="padding:4px 10px;font-size:0.75rem" onclick="deleteLease(${a.id},'${doc.path}')">Delete</button>
           </td>
@@ -1298,7 +1299,21 @@ async function uploadLease(id) {
     body: formData
   });
 
-  const data = await res.json();
+async function setCurrentLease(id, path) {
+  const apt = apartments.find(a => a.id === id);
+  if (!apt) return;
+  apt.lease_docs = apt.lease_docs.map(d => ({ ...d, current: d.path === path }));
+  apt.lease_doc = path;
+  const token = localStorage.getItem('estately-token');
+  await fetch(`${API}/apartments/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify({ lease_doc: path, lease_docs: apt.lease_docs })
+  });
+  openDetail(id);
+}
+
+const data = await res.json();
   if (data.success) {
     document.getElementById('upload-status').textContent = 'Uploaded successfully!';
     const apt = apartments.find(a => a.id === id);
