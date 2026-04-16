@@ -1312,12 +1312,16 @@ async function uploadLease(id) {
 async function setCurrentLease(id, path) {
   const apt = apartments.find(a => a.id === id);
   if (!apt) return;
-  apt.lease_docs = apt.lease_docs.map(d => ({ ...d, current: d.path === path }));
-  apt.lease_doc = path;
+  const isAlreadyCurrent = apt.lease_docs.find(d => d.path === path)?.current;
+  apt.lease_docs = apt.lease_docs.map(d => ({
+    ...d,
+    current: d.path === path ? !isAlreadyCurrent : false
+  }));
+  apt.lease_doc = isAlreadyCurrent ? null : path;
   await fetch(`${API}/apartments/${id}`, {
     method: 'PUT',
     headers: getHeaders(),
-    body: JSON.stringify({ lease_doc: path, lease_docs: apt.lease_docs })
+    body: JSON.stringify({ lease_doc: apt.lease_doc, lease_docs: apt.lease_docs })
   });
   openDetail(id);
 }
