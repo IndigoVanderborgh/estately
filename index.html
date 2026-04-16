@@ -1300,26 +1300,41 @@ async function uploadLease(id) {
 
   const data = await res.json();
   if (data.success) {
-    document.getElementById('upload-status').textContent = 'Document uploaded successfully!';
+    document.getElementById('upload-status').textContent = 'Uploaded successfully!';
     const apt = apartments.find(a => a.id === id);
-    if (apt) apt.lease_doc = data.path;
+    if (apt) {
+      apt.lease_doc = data.path;
+      apt.lease_docs = data.lease_docs;
+    }
+    // Refresh the detail modal to show the new document in the table
+    openDetail(id);
   } else {
     document.getElementById('upload-status').textContent = 'Upload failed. Try again.';
   }
 }
 
-async function downloadLease(id) {
-  const apt = apartments.find(a => a.id === id);
-  if (!apt || !apt.lease_doc) return;
-
+async function downloadLeaseByPath(id, path) {
   const token = localStorage.getItem('estately-token');
-  const res = await fetch(`${API}/apartments/${id}/lease`, {
+  const res = await fetch(`${API}/apartments/${id}/lease?path=${encodeURIComponent(path)}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
-
   const data = await res.json();
-  if (data.url) {
-    window.open(data.url, '_blank');
+  if (data.url) window.open(data.url, '_blank');
+}
+
+async function deleteLease(id, path) {
+  if (!confirm('Are you sure you want to delete this document?')) return;
+  const token = localStorage.getItem('estately-token');
+  const res = await fetch(`${API}/apartments/${id}/lease`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path })
+  });
+  const data = await res.json();
+  if (data.success) {
+    const apt = apartments.find(a => a.id === id);
+    if (apt) apt.lease_docs = apt.lease_docs.filter(d => d.path !== path);
+    openDetail(id);
   }
 }
 

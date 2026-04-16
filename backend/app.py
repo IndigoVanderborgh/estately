@@ -181,11 +181,13 @@ def get_lease(id):
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    response = supabase.table('apartments').select('lease_doc').eq('id', id).eq('user_id', user_id).execute()
-    if not response.data or not response.data[0].get('lease_doc'):
-        return jsonify({'error': 'No document found'}), 404
+    file_path = request.args.get('path')
+    if not file_path:
+        response = supabase.table('apartments').select('lease_doc').eq('id', id).eq('user_id', user_id).execute()
+        if not response.data or not response.data[0].get('lease_doc'):
+            return jsonify({'error': 'No document found'}), 404
+        file_path = response.data[0]['lease_doc']
 
-    file_path = response.data[0]['lease_doc']
     url = r2.generate_presigned_url(
         'get_object',
         Params={'Bucket': R2_BUCKET, 'Key': file_path},
