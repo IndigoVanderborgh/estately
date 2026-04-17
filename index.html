@@ -896,6 +896,7 @@ function openDetail(id) {
     </table>` : '<p style="font-size:0.82rem;color:var(--text-mid);margin-bottom:16px">No documents uploaded yet.</p>'}
     <div style="display:flex;justify-content:flex-end;gap:10px">
       <button class="btn btn-outline" onclick="closeModal('detail-modal')">Close</button>
+      <button class="btn" onclick="openAddTenantModal(${a.id})">+ Add Tenant</button>
     </div>
   </div>
   `;
@@ -1187,7 +1188,16 @@ function saveEdit() {
   a.leaseEnd    = document.getElementById('e-end').value;
   const tenure  = document.getElementById('e-tenure').value;
 
-  if (histIdx !== undefined && histIdx !== '') {
+  if (histIdx === 'new') {
+    // Adding a brand new tenant row
+    // Mark all previous as not current
+    a.history.forEach(h => h.current = false);
+    a.history.push({
+      tenant: a.tenant, price: a.price,
+      from: a.leaseStart, to: a.leaseEnd,
+      tenure, current: true
+    });
+  } else if (histIdx !== undefined && histIdx !== '') {
     // Editing a specific history row
     const idx = parseInt(histIdx);
     a.history[idx] = {
@@ -1370,6 +1380,24 @@ async function deleteLease(id, path) {
     if (apt) apt.lease_docs = apt.lease_docs.filter(d => d.path !== path);
     openDetail(id);
   }
+}
+
+function openAddTenantModal(aptId) {
+  closeModal('detail-modal');
+  const apt = apartments.find(a => a.id === aptId);
+  if (!apt) return;
+  document.getElementById('e-id').value      = apt.id;
+  document.getElementById('e-name').value    = apt.name;
+  document.getElementById('e-address').value = apt.address;
+  document.getElementById('e-status').value  = 'leased';
+  document.getElementById('e-price').value   = '';
+  document.getElementById('e-tenant').value  = '';
+  document.getElementById('e-payment').value = 'unpaid';
+  document.getElementById('e-start').value   = '';
+  document.getElementById('e-end').value     = '';
+  document.getElementById('e-tenure').value  = 'long';
+  document.getElementById('e-id').dataset.histIdx = 'new';
+  document.getElementById('edit-modal').classList.add('open');
 }
 
 async function deleteTenantRow(aptId, idx) {
