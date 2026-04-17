@@ -774,7 +774,7 @@ function openDetail(id) {
   const hasHistory = a.history.length > 0;
   const tc = tenureCounts(a);
 
-  const histRows = a.history.map(h=>{
+  const histRows = a.history.map((h, idx) => {
     const t = inferTenure(h);
     return `<tr class="${h.current?'current-row':''}">
       <td>${h.tenant}</td>
@@ -784,6 +784,10 @@ function openDetail(id) {
       <td>${tenureDuration(h)}</td>
       <td>${ttBadge(t)}</td>
       <td>${h.current?'<span class="status-badge status-leased" style="font-size:0.7rem">Current</span>':'<span style="color:var(--text-mid);font-size:0.82rem">Ended</span>'}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-outline" style="padding:4px 10px;font-size:0.72rem" onclick="openEditTenantRow(${a.id},${idx})">Edit</button>
+        <button class="btn btn-remove" style="padding:4px 10px;font-size:0.72rem" onclick="deleteTenantRow(${a.id},${idx})">Delete</button>
+      </td>
     </tr>`;
   }).join('');
 
@@ -860,7 +864,7 @@ function openDetail(id) {
     <div class="section-divider" style="margin-top:${hasHistory?'20px':'0'}">Tenant &amp; Lease History</div>
     ${hasHistory
       ? `<table class="history-table">
-          <thead><tr><th>Tenant</th><th>Rent</th><th>Start</th><th>End</th><th>Duration</th><th>Type</th><th>Status</th></tr></thead>
+          <thead><tr><th>Tenant</th><th>Rent</th><th>Start</th><th>End</th><th>Duration</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>${histRows}</tbody>
         </table>`
       : `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:12px 0">No history recorded yet.</p>`}
@@ -892,7 +896,6 @@ function openDetail(id) {
     </table>` : '<p style="font-size:0.82rem;color:var(--text-mid);margin-bottom:16px">No documents uploaded yet.</p>'}
     <div style="display:flex;justify-content:flex-end;gap:10px">
       <button class="btn btn-outline" onclick="closeModal('detail-modal')">Close</button>
-      <button class="btn" onclick="openEditModal(${a.id})">✎ Edit</button>
     </div>
   </div>
   `;
@@ -1171,6 +1174,7 @@ function openEditModal(id) {
 
 function saveEdit() {
   const id      = parseInt(document.getElementById('e-id').value);
+  const histIdx = document.getElementById('e-id').dataset.histIdx;
   const a       = apartments.find(x => x.id === id);
   if (!a) return;
   a.name        = document.getElementById('e-name').value.trim() || a.name;
@@ -1182,18 +1186,32 @@ function saveEdit() {
   a.leaseStart  = document.getElementById('e-start').value;
   a.leaseEnd    = document.getElementById('e-end').value;
   const tenure  = document.getElementById('e-tenure').value;
-  // Update or create the current history entry
-  const currentH = a.history.find(h => h.current);
-  if (currentH) {
-    currentH.tenant  = a.tenant;
-    currentH.price   = a.price;
-    currentH.from    = a.leaseStart || currentH.from;
-    currentH.to      = a.leaseEnd   || currentH.to;
-    currentH.tenure  = tenure;
-  } else if (a.leaseStart) {
-    a.history.push({ tenant: a.tenant, price: a.price, from: a.leaseStart, to: a.leaseEnd, tenure, current: true });
+
+  if (histIdx !== undefined && histIdx !== '') {
+    // Editing a specific history row
+    const idx = parseInt(histIdx);
+    a.history[idx] = {
+      ...a.history[idx],
+      tenant: a.tenant,
+      price: a.price,
+      from: a.leaseStart || a.history[idx].from,
+      to: a.leaseEnd || a.history[idx].to,
+      tenure
+    };
+  } else {
+    // Editing from the old flow — update current history entry
+    const currentH = a.history.find(h => h.current);
+    if (currentH) {
+      currentH.tenant  = a.tenant;
+      currentH.price   = a.price;
+      currentH.from    = a.leaseStart || currentH.from;
+      currentH.to      = a.leaseEnd   || currentH.to;
+      currentH.tenure  = tenure;
+    } else if (a.leaseStart) {
+      a.history.push({ tenant: a.tenant, price: a.price, from: a.leaseStart, to: a.leaseEnd, tenure, current: true });
+    }
   }
-  // Save to backend
+
   fetch(`${API}/apartments/${id}`, {
     method: 'PUT',
     headers: getHeaders(),
@@ -1205,6 +1223,9 @@ function saveEdit() {
       history: a.history
     })
   });
+
+  // Clear the histIdx after saving
+  document.getElementById('e-id').dataset.histIdx = '';
   closeModal('edit-modal');
   updateStats();
   renderGrid('apt-grid');
@@ -1349,6 +1370,57 @@ async function deleteLease(id, path) {
     if (apt) apt.lease_docs = apt.lease_docs.filter(d => d.path !== path);
     openDetail(id);
   }
+}
+
+async function deleteTenantRow(aptId, idx) {
+  if (!confirm('Delete this tenant entry?')) return;
+  const apt = apartments.find(a => a.id === aptId);
+  if (!apt) return;
+  apt.history.splice(idx, 1);
+  // If we deleted the current tenant, clear the main tenant fields
+  if (!apt.history.find(h => h.current)) {
+    apt.tenant = '—';
+    apt.leaseStart = '';
+    apt.leaseEnd = '';
+    apt.status = 'vacant';
+    apt.payment = 'unpaid';
+  }
+  await fetch(`${API}/apartments/${aptId}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      history: apt.history,
+      tenant: apt.tenant,
+      lease_start: apt.leaseStart || null,
+      lease_end: apt.leaseEnd || null,
+      status: apt.status,
+      payment: apt.payment
+    })
+  });
+  updateStats();
+  renderGrid('apt-grid');
+  renderGrid('apt-grid-2');
+  openDetail(aptId);
+}
+
+function openEditTenantRow(aptId, idx) {
+  const apt = apartments.find(a => a.id === aptId);
+  if (!apt) return;
+  const h = apt.history[idx];
+  closeModal('detail-modal');
+  document.getElementById('e-id').value      = apt.id;
+  document.getElementById('e-name').value    = apt.name;
+  document.getElementById('e-address').value = apt.address;
+  document.getElementById('e-status').value  = apt.status;
+  document.getElementById('e-price').value   = h.price || '';
+  document.getElementById('e-tenant').value  = h.tenant || '';
+  document.getElementById('e-payment').value = apt.payment;
+  document.getElementById('e-start').value   = h.from || '';
+  document.getElementById('e-end').value     = h.to || '';
+  document.getElementById('e-tenure').value  = inferTenure(h);
+  // Store which history index we're editing
+  document.getElementById('e-id').dataset.histIdx = idx;
+  document.getElementById('edit-modal').classList.add('open');
 }
 
 checkAuth();</script>
