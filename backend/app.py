@@ -37,6 +37,12 @@ def get_user_id():
     except:
         return None
 
+# ── demo user check ──────────────────────────────────────────────────
+DEMO_USER_ID = '9bd78e66-d3b6-40c3-8985-74828cb59d89'  # replaced with actual demo UUID via supabase
+
+def is_demo_user(user_id):
+    return user_id == DEMO_USER_ID
+
 # ── Test route ─────────────────────────────────────────────────
 @app.route('/api/health')
 def health():
@@ -66,6 +72,8 @@ def add_apartment():
     user_id = get_user_id()
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
+    if is_demo_user(user_id):
+        return jsonify({'error': 'Demo users cannot add apartments'}), 403
     data = request.json
     data['user_id'] = user_id
     response = supabase.table('apartments').insert(data).execute()
