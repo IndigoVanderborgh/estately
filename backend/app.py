@@ -86,6 +86,10 @@ def update_apartment(id):
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
     data = request.json
+    if is_demo_user(user_id):
+        history = data.get('history', [])
+        if len(history) > 3:
+            return jsonify({'error': 'Demo users are limited to 3 tenants'}), 403
     response = supabase.table('apartments').update(data).eq('id', id).eq('user_id', user_id).execute()
     return jsonify(response.data)
 
@@ -95,6 +99,8 @@ def delete_apartment(id):
     user_id = get_user_id()
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
+    if is_demo_user(user_id):
+        return jsonify({'error': 'Demo users cannot delete apartments'}), 403
     response = supabase.table('apartments').delete().eq('id', id).eq('user_id', user_id).execute()
     return jsonify({'success': True})
 
@@ -119,7 +125,8 @@ def upload_lease(id):
     user_id = get_user_id()
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
-
+    if is_demo_user(user_id):
+        return jsonify({'error': 'Demo users cannot upload documents'}), 403
     file = request.files.get('file')
     if not file:
         return jsonify({'error': 'No file provided'}), 400
