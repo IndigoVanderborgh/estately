@@ -398,6 +398,7 @@
     </div>
     <p id="login-error" style="color:#9b3535;font-size:0.82rem;margin-bottom:12px;display:none">Invalid email or password.</p>
     <button class="btn" style="width:100%;padding:12px;font-size:0.95rem" onclick="login()">Sign In</button>
+    <button class="btn btn-outline" style="width:100%;padding:12px;font-size:0.95rem;margin-top:10px" onclick="demoLogin()">Try Demo</button>
   </div>
 </div>
 
@@ -405,6 +406,9 @@
   <div class="logo">
     <h1>Estate<span>ly</span></h1>
     <p>Property Manager</p>
+  </div>
+  <div id="demo-banner" style="display:none;background:#9c6b1b;color:#fff;font-size:0.75rem;padding:8px 16px;text-align:center;letter-spacing:0.5px">
+  DEMO MODE — Limited Access
   </div>
   <nav>
     <a class="active" onclick="showView('dashboard',this)">
@@ -992,6 +996,7 @@ function openAddModal() { document.getElementById('add-modal').classList.add('op
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 async function addApartment() {
+  if (isDemo()) { alert('Demo accounts cannot add apartments.'); return; }
   const name    = document.getElementById('f-name').value.trim();
   const address = document.getElementById('f-address').value.trim();
   if(!name||!address){ alert('Please fill in Unit Name and Address.'); return; }
@@ -1278,12 +1283,13 @@ async function login() {
   const password = document.getElementById('login-password').value;
   const res  = await fetch(`${API}/login`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
   });
   const data = await res.json();
   if (data.token) {
     localStorage.setItem('estately-token', data.token);
+    localStorage.setItem('estately-demo', email === 'demo@estately.com' ? 'true' : 'false');
     showApp();
   } else {
     document.getElementById('login-error').style.display = 'block';
@@ -1294,6 +1300,9 @@ function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.querySelector('.sidebar').style.display = 'flex';
   document.querySelector('.main').style.display = 'block';
+  if (isDemo()) {
+    document.getElementById('demo-banner').style.display = 'block';
+  }
   loadApartments();
 }
 
@@ -1308,12 +1317,24 @@ function checkAuth() {
   }
 }
 
+function demoLogin() {
+  document.getElementById('login-email').value = 'demo@estately.com';
+  document.getElementById('login-password').value = 'demo1234';
+  login();
+}
+
+function isDemo() {
+  return localStorage.getItem('estately-demo') === 'true';
+}
+
 function logout() {
   localStorage.removeItem('estately-token');
+  localStorage.removeItem('estately-demo');
   location.reload();
 }
 
 async function uploadLease(id) {
+  if (isDemo()) { alert('Demo accounts cannot upload documents.'); return; }
   const input = document.getElementById('lease-upload');
   const file = input.files[0];
   if (!file) return;
@@ -1401,6 +1422,7 @@ function openAddTenantModal(aptId) {
 }
 
 async function deleteTenantRow(aptId, idx) {
+  if (isDemo()) { alert('Demo accounts cannot delete tenant history.'); return; }
   if (!confirm('Delete this tenant entry?')) return;
   const apt = apartments.find(a => a.id === aptId);
   if (!apt) return;
