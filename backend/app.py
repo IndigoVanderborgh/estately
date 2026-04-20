@@ -37,11 +37,6 @@ def get_user_id():
     except:
         return None
 
-# ── demo user check ──────────────────────────────────────────────────
-DEMO_USER_ID = '9bd78e66-d3b6-40c3-8985-74828cb59d89'  # replaced with actual demo UUID via supabase
-
-def is_demo_user(user_id):
-    return user_id == DEMO_USER_ID
 
 # ── Test route ─────────────────────────────────────────────────
 @app.route('/api/health')
@@ -72,8 +67,6 @@ def add_apartment():
     user_id = get_user_id()
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
-    if is_demo_user(user_id):
-        return jsonify({'error': 'Demo users cannot add apartments'}), 403
     data = request.json
     data['user_id'] = user_id
     response = supabase.table('apartments').insert(data).execute()
@@ -86,10 +79,6 @@ def update_apartment(id):
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
     data = request.json
-    if is_demo_user(user_id):
-        history = data.get('history', [])
-        if len(history) > 3:
-            return jsonify({'error': 'Demo users are limited to 3 tenants'}), 403
     response = supabase.table('apartments').update(data).eq('id', id).eq('user_id', user_id).execute()
     return jsonify(response.data)
 
@@ -99,8 +88,6 @@ def delete_apartment(id):
     user_id = get_user_id()
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
-    if is_demo_user(user_id):
-        return jsonify({'error': 'Demo users cannot delete apartments'}), 403
     response = supabase.table('apartments').delete().eq('id', id).eq('user_id', user_id).execute()
     return jsonify({'success': True})
 
@@ -125,8 +112,6 @@ def upload_lease(id):
     user_id = get_user_id()
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
-    if is_demo_user(user_id):
-        return jsonify({'error': 'Demo users cannot upload documents'}), 403
     file = request.files.get('file')
     if not file:
         return jsonify({'error': 'No file provided'}), 400
