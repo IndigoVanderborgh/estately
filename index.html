@@ -1265,6 +1265,22 @@ function getHeaders() {
 
 // ── Load data from Flask ───────────────────────────────────────
 async function loadApartments() {
+  if (isDemo()) {
+    apartments = [
+      { id: 1, name: 'Unit 1A', address: '123 Demo Street', status: 'leased', price: 1500,
+        payment: 'paid', tenant: 'Jane Demo', leaseStart: '2025-01-01', leaseEnd: '2026-01-01',
+        lease_docs: [], lease_doc: null,
+        history: [
+          { tenant: 'John Sample', price: 1300, from: '2023-01-01', to: '2024-01-01', tenure: 'long' },
+          { tenant: 'Mary Example', price: 1400, from: '2024-01-15', to: '2024-12-31', tenure: 'long' },
+          { tenant: 'Jane Demo', price: 1500, from: '2025-01-01', to: '2026-01-01', tenure: 'long', current: true }
+        ]
+      }
+    ];
+    updateStats();
+    renderGrid('apt-grid');
+    return;
+  }
   try {
     const res  = await fetch(`${API}/apartments`, { headers: getHeaders() });
     const data = await res.json();
@@ -1318,9 +1334,9 @@ function checkAuth() {
 }
 
 function demoLogin() {
-  document.getElementById('login-email').value = 'demo@estately.com';
-  document.getElementById('login-password').value = 'demo1234';
-  login();
+  localStorage.setItem('estately-demo', 'true');
+  localStorage.setItem('estately-token', 'demo');
+  showApp();
 }
 
 function isDemo() {
