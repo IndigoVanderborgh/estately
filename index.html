@@ -1070,6 +1070,7 @@ document.addEventListener('click', () => closeActionMenu());
 function openAddPropertyModal() { document.getElementById('add-property-modal').classList.add('open'); }
 
 function addProperty() {
+  if (isDemo()) { alert('Demo accounts cannot add properties.'); return; }
   const address = document.getElementById('fp-address').value.trim();
   if(!address) { alert('Please enter a property address.'); return; }
   // Check not duplicate
