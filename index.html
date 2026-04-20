@@ -993,7 +993,6 @@ function openAddModal() { document.getElementById('add-modal').classList.add('op
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 async function addApartment() {
-  if (isDemo()) { alert('Demo accounts cannot add apartments.'); return; }
   const name    = document.getElementById('f-name').value.trim();
   const address = document.getElementById('f-address').value.trim();
   if(!name||!address){ alert('Please fill in Unit Name and Address.'); return; }
@@ -1067,7 +1066,6 @@ document.addEventListener('click', () => closeActionMenu());
 function openAddPropertyModal() { document.getElementById('add-property-modal').classList.add('open'); }
 
 function addProperty() {
-  if (isDemo()) { alert('Demo accounts cannot add properties.'); return; }
   const address = document.getElementById('fp-address').value.trim();
   if(!address) { alert('Please enter a property address.'); return; }
   // Check not duplicate
@@ -1088,7 +1086,6 @@ function addProperty() {
 
 function openRemovePropertyModal() {
   // Group apartments by address
-  if (isDemo()) { alert('Demo accounts cannot remove apartments.'); return; }
   const addresses = [...new Set(apartments.map(a => a.address))];
   const list = document.getElementById('remove-property-list');
   if(!addresses.length) {
@@ -1133,7 +1130,6 @@ function openRemoveModal() {
 }
 
 async function removeApartment(id) {
-  if (isDemo()) { alert('Demo accounts cannot remove apartments.'); return; }
   await fetch(`${API}/apartments/${id}`, { method: 'DELETE', headers: getHeaders() });
   apartments = apartments.filter(a => a.id !== id);
   const el = document.getElementById('ri-' + id);
@@ -1179,7 +1175,6 @@ function openEditModal(id) {
 }
 
 function saveEdit() {
-  if (isDemo()) { alert('Demo accounts cannot save changes.'); return; }
   const id      = parseInt(document.getElementById('e-id').value);
   const histIdx = document.getElementById('e-id').dataset.histIdx;
   const a       = apartments.find(x => x.id === id);
@@ -1347,7 +1342,6 @@ function logout() {
 }
 
 async function uploadLease(id) {
-  if (isDemo()) { alert('Demo accounts cannot upload documents.'); return; }
   const input = document.getElementById('lease-upload');
   const file = input.files[0];
   if (!file) return;
@@ -1417,10 +1411,6 @@ async function deleteLease(id, path) {
 }
 
 function openAddTenantModal(aptId) {
-  if (isDemo() && apt.history.length >= 3) { 
-  alert('Demo accounts are limited to 3 tenants.'); 
-  return; 
-  }
   closeModal('detail-modal');
   const apt = apartments.find(a => a.id === aptId);
   if (!apt) return;
@@ -1439,7 +1429,6 @@ function openAddTenantModal(aptId) {
 }
 
 async function deleteTenantRow(aptId, idx) {
-  if (isDemo()) { alert('Demo accounts cannot delete tenant history.'); return; }
   if (!confirm('Delete this tenant entry?')) return;
   const apt = apartments.find(a => a.id === aptId);
   if (!apt) return;
