@@ -311,6 +311,10 @@
   body.dark .btn-remove { border-color: rgba(240,144,144,0.6); color: #f09090; }
   body.dark .btn-remove:hover { background: rgba(240,144,144,0.12); border-color: #f09090; }
 
+  /* ── DEMO MODE ── */
+  .btn-disabled { opacity: 0.35 !important; cursor: not-allowed !important; pointer-events: none !important; transform: none !important; }
+  .demo-banner { background: var(--yellow-light); color: var(--cream); font-size: 0.75rem; padding: 8px 16px; text-align: center; letter-spacing: 1px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
+
   /* Remove modal list */
   .remove-list { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; margin-bottom: 8px; }
   .remove-item {
@@ -430,7 +434,8 @@
     <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:0.7;flex-shrink:0"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     <span class="toggle-label">Sign Out</span>
   </button>
-  <div class="sidebar-footer">© 2025 Estately</div>
+  <div id="demo-banner" class="demo-banner" style="display:none">Demo Mode — Restricted Access</div>
+  <div class="sidebar-footer">© 2026 Estately</div>
 </aside>
 
 <div class="main">
@@ -1308,6 +1313,8 @@ async function login() {
 }
 
 function applyDemoRestrictions() {
+  // Show demo banner
+  document.getElementById('demo-banner').style.display = 'block';
   // Disable all action menu buttons
   document.querySelectorAll('.action-item').forEach(btn => btn.classList.add('btn-disabled'));
 }
