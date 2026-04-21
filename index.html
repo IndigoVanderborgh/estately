@@ -1334,7 +1334,7 @@ async function demoLogin() {
     const res = await fetch(`${API}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'demo@estately.app', password: 'EstatelyDemo2026!' })
+      body: JSON.stringify({ email: 'demo@estately.com', password: 'EstatelyDemo2026!' })
     });
     const data = await res.json();
     if (data.token) {
