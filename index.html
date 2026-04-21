@@ -786,8 +786,8 @@ function openDetail(id) {
       <td>${ttBadge(t)}</td>
       <td>${h.current?'<span class="status-badge status-leased" style="font-size:0.7rem">Current</span>':'<span style="color:var(--text-mid);font-size:0.82rem">Ended</span>'}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-outline" style="padding:4px 10px;font-size:0.72rem" onclick="openEditTenantRow(${a.id},${idx})">Edit</button>
-        <button class="btn btn-remove" style="padding:4px 10px;font-size:0.72rem" onclick="deleteTenantRow(${a.id},${idx})">Delete</button>
+        <button class="btn btn-outline ${isDemo() ? 'btn-disabled' : ''}" style="padding:4px 10px;font-size:0.72rem" onclick="openEditTenantRow(${a.id},${idx})">Edit</button>
+        <button class="btn btn-remove ${isDemo() ? 'btn-disabled' : ''}" style="padding:4px 10px;font-size:0.72rem" onclick="deleteTenantRow(${a.id},${idx})">Delete</button>
       </td>
     </tr>`;
   }).join('');
@@ -873,7 +873,7 @@ function openDetail(id) {
   <div style="margin-top:24px;border-top:1px solid rgba(127,85,57,0.1);padding-top:20px">
     <div class="section-divider" style="margin-top:0">Lease Documents</div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
-      <label class="btn btn-outline" style="cursor:pointer;margin:0">
+      <label class="btn btn-outline ${isDemo() ? 'btn-disabled' : ''}" style="cursor:pointer;margin:0">
         Upload Lease PDF
         <input type="file" id="lease-upload" accept=".pdf" style="display:none" onchange="uploadLease(${a.id})">
       </label>
@@ -897,7 +897,7 @@ function openDetail(id) {
     </table>` : '<p style="font-size:0.82rem;color:var(--text-mid);margin-bottom:16px">No documents uploaded yet.</p>'}
     <div style="display:flex;justify-content:flex-end;gap:10px">
       <button class="btn btn-outline" onclick="closeModal('detail-modal')">Close</button>
-      <button class="btn" onclick="openAddTenantModal(${a.id})">+ Add Tenant</button>
+      <button class="btn ${isDemo() ? 'btn-disabled' : ''}" onclick="openAddTenantModal(${a.id})">+ Add Tenant</button>
     </div>
   </div>
   `;
@@ -1098,7 +1098,7 @@ function openRemovePropertyModal() {
           <div class="remove-item-name">${addr}</div>
           <div class="remove-item-addr">${units.length} unit${units.length !== 1 ? 's' : ''}</div>
         </div>
-        <button class="remove-btn" onclick="removeProperty('${addr.replace(/'/g, "\\'")}')">Remove</button>
+        <button class="remove-btn ${isDemo() ? 'btn-disabled' : ''}" onclick="removeProperty('${addr.replace(/'/g, "\\'")}')">Remove</button>
       </div>`;
     }).join('');
   }
@@ -1123,7 +1123,7 @@ function openRemoveModal() {
           <div class="remove-item-name">${a.name}</div>
           <div class="remove-item-addr">${a.address} &middot; ${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</div>
         </div>
-        <button class="remove-btn" onclick="removeApartment(${a.id})">Remove</button>
+        <button class="remove-btn ${isDemo() ? 'btn-disabled' : ''}" onclick="removeApartment(${a.id})">Remove</button>
       </div>`).join('');
   }
   document.getElementById('remove-modal').classList.add('open');
@@ -1307,11 +1307,17 @@ async function login() {
   }
 }
 
+function applyDemoRestrictions() {
+  // Disable all action menu buttons
+  document.querySelectorAll('.action-item').forEach(btn => btn.classList.add('btn-disabled'));
+}
+
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.querySelector('.sidebar').style.display = 'flex';
   document.querySelector('.main').style.display = 'block';
   loadApartments();
+  if (isDemo()) applyDemoRestrictions();
 }
 
 function checkAuth() {
