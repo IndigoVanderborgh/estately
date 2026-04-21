@@ -1,16 +1,20 @@
 from flask import Flask, jsonify, request
-from flask_cors import CORS
+from flask_cors import CORS  # ← one import, at the top
 from supabase import create_client
 from dotenv import load_dotenv
 import os
-# Testing boto3
 import boto3
 from botocore.client import Config
 
 load_dotenv('../.env')
 
 app = Flask(__name__)
-CORS(app)
+
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "https://indigovanderborgh.github.io"
+    }
+})
 
 supabase = create_client(
     os.getenv('SUPABASE_URL'),

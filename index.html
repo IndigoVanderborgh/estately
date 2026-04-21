@@ -313,7 +313,7 @@
 
   /* ── DEMO MODE ── */
   .btn-disabled { opacity: 0.35 !important; cursor: not-allowed !important; pointer-events: none !important; transform: none !important; }
-  .demo-banner { background: var(--yellow-light); color: var(--cream); font-size: 0.75rem; padding: 8px 16px; text-align: center; letter-spacing: 1px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
+  .demo-banner { background: #9c6b1b; color: #fff; font-size: 0.75rem; padding: 8px 16px; text-align: center; letter-spacing: 0.5px; font-family: 'DM Sans', sans-serif; }
 
   /* Remove modal list */
   .remove-list { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; margin-bottom: 8px; }
@@ -1266,31 +1266,16 @@ function getHeaders() {
 
 // ── Load data from Flask ───────────────────────────────────────
 async function loadApartments() {
-  if (isDemo()) {
-    apartments = [
-      { id: 1, name: 'Unit 1A', address: '123 Demo Street', status: 'leased', price: 1500,
-        payment: 'paid', tenant: 'Jane Demo', leaseStart: '2025-01-01', leaseEnd: '2026-01-01',
-        lease_docs: [], lease_doc: null,
-        history: [
-          { tenant: 'John Sample', price: 1300, from: '2023-01-01', to: '2024-01-01', tenure: 'long' },
-          { tenant: 'Mary Example', price: 1400, from: '2024-01-15', to: '2024-12-31', tenure: 'long' },
-          { tenant: 'Jane Demo', price: 1500, from: '2025-01-01', to: '2026-01-01', tenure: 'long', current: true }
-        ]
-      }
-    ];
-    updateStats();
-    renderGrid('apt-grid');
-    return;
-  }
   try {
     const res  = await fetch(`${API}/apartments`, { headers: getHeaders() });
+    if (res.status === 401) { logout(); return; }
     const data = await res.json();
     apartments = data.map(normalize);
     updateStats();
     renderGrid('apt-grid');
   } catch(e) {
     console.error('Could not connect to backend:', e);
-    alert('Could not connect to the Flask backend. Make sure it is running on port 5000.');
+    alert('Could not connect to the backend. Please try again.');
   }
 }
 
@@ -1314,8 +1299,12 @@ async function login() {
 
 function applyDemoRestrictions() {
   // Show demo banner
-  document.getElementById('demo-banner').style.display = 'block';
-  // Disable all action menu buttons
+  const banner = document.getElementById('demo-banner');
+  if (banner) {
+    banner.style.display = 'block';
+    banner.textContent = '👁 Demo Mode — Read-only. Sign up to manage your properties.';
+  }
+  // Disable all action menu buttons (add/remove apartment/property)
   document.querySelectorAll('.action-item').forEach(btn => btn.classList.add('btn-disabled'));
 }
 
@@ -1338,10 +1327,28 @@ function checkAuth() {
   }
 }
 
-function demoLogin() {
-  localStorage.setItem('estately-demo', 'true');
-  localStorage.setItem('estately-token', 'demo');
-  showApp();
+async function demoLogin() {
+  const btn = document.querySelector('button[onclick="demoLogin()"]');
+  if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
+  try {
+    const res = await fetch(`${API}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'demo@estately.app', password: 'EstatelyDemo2026!' })
+    });
+    const data = await res.json();
+    if (data.token) {
+      localStorage.setItem('estately-token', data.token);
+      localStorage.setItem('estately-demo', 'true');
+      showApp();
+    } else {
+      alert('Demo is temporarily unavailable. Please try again shortly.');
+    }
+  } catch(e) {
+    alert('Could not reach the server. Please try again.');
+  } finally {
+    if (btn) { btn.textContent = 'Try Demo'; btn.disabled = false; }
+  }
 }
 
 function isDemo() {
