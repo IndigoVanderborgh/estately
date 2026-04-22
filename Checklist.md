@@ -2,7 +2,7 @@
 [x] - Frontend
 [x] - Backend always online
 [x] - Login/Authentication
-[ ] - Security/Privacy
+[x] - Security/Privacy
 [x] - Separate user from content
 [x] - Document support
     [x] - Current lease
