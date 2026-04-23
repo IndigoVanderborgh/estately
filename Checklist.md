@@ -9,14 +9,14 @@
     [x] - Archives lease
     [x] - Table view
     [x] - Priority lease
-[] - Demo
+[x] - Demo
 [x] - Tenant
     [x] - Add tenant
     [x] - Remove tenant
     [x] - Edit tenant
-[ ] - Split history/details
-[ ] - Excel support
-[ ] - Split dashboard/apartments
-[ ] - Hamburger UI
-[ ] - Optimization frontend
+[ ] - Split history/details 23/4
+[ ] - Excel support 28/4 due
+[ ] - Split dashboard/apartments 23/4 due
+[ ] - Hamburger UI 24/4
+[ ] - Optimization frontend 26/4
 
