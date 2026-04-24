@@ -418,7 +418,7 @@
     </a>
     <a onclick="showView('apartments',this)">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
-      Apartments
+      Properties
     </a>
     <a onclick="showView('payments',this)">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
@@ -478,22 +478,105 @@
         <div class="stat-card"><div class="stat-label">Vacant</div><div class="stat-value" id="stat-vacant" style="color:#b84040">0</div><div class="stat-sub">Available now</div></div>
         <div class="stat-card"><div class="stat-label">Monthly Revenue</div><div class="stat-value" id="stat-revenue" style="font-size:1.5rem">$0</div><div class="stat-sub">Active leases</div></div>
       </div>
-      <div class="section-title">
-        <span>All Properties</span>
-        <div class="filter-tabs">
-          <button class="tab active" onclick="filterApts('all',this)">All</button>
-          <button class="tab" onclick="filterApts('leased',this)">Leased</button>
-          <button class="tab" onclick="filterApts('ending',this)">Ending Soon</button>
-          <button class="tab" onclick="filterApts('vacant',this)">Vacant</button>
+
+      <!-- ── DASHBOARD OVERVIEW CHARTS ── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:8px">
+
+        <!-- Property Overview -->
+        <div class="stat-card" style="padding:26px 28px">
+          <div class="stat-label" style="margin-bottom:20px">Property Overview</div>
+          <div style="display:flex;align-items:center;gap:28px">
+            <div style="position:relative;width:130px;height:130px;flex-shrink:0">
+              <canvas id="dash-occupancy-chart"></canvas>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+                <span id="dash-occ-center-val" style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;color:var(--text-dark);line-height:1">0</span>
+                <span style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-mid);margin-top:2px">Units</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:10px;height:10px;border-radius:50%;background:#656d4a;flex-shrink:0"></div>
+                <div style="flex:1">
+                  <div style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-mid);font-weight:500">Leased</div>
+                  <div id="dash-occ-leased" style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--text-dark)">0</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:10px;height:10px;border-radius:50%;background:#d4933a;flex-shrink:0"></div>
+                <div style="flex:1">
+                  <div style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-mid);font-weight:500">Ending Soon</div>
+                  <div id="dash-occ-ending" style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--text-dark)">0</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:10px;height:10px;border-radius:50%;background:#c0392b;flex-shrink:0"></div>
+                <div style="flex:1">
+                  <div style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-mid);font-weight:500">Vacant</div>
+                  <div id="dash-occ-vacant" style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--text-dark)">0</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- Payment Status -->
+        <div class="stat-card" style="padding:26px 28px">
+          <div class="stat-label" style="margin-bottom:20px">Payment</div>
+          <div style="display:flex;align-items:center;gap:28px">
+            <div style="position:relative;width:130px;height:130px;flex-shrink:0">
+              <canvas id="dash-payment-chart"></canvas>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+                <span id="dash-pay-center-val" style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;color:var(--text-dark);line-height:1">0</span>
+                <span style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-mid);margin-top:2px">Tenants</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:10px;height:10px;border-radius:50%;background:#656d4a;flex-shrink:0"></div>
+                <div style="flex:1">
+                  <div style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-mid);font-weight:500">Paid</div>
+                  <div id="dash-pay-paid" style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--text-dark)">0</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:10px;height:10px;border-radius:50%;background:#3a6bc4;flex-shrink:0"></div>
+                <div style="flex:1">
+                  <div style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-mid);font-weight:500">Processing</div>
+                  <div id="dash-pay-processing" style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--text-dark)">0</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:10px;height:10px;border-radius:50%;background:#c0392b;flex-shrink:0"></div>
+                <div style="flex:1">
+                  <div style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-mid);font-weight:500">Unpaid</div>
+                  <div id="dash-pay-unpaid" style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--text-dark)">0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
-      <div id="apt-grid"></div>
+
+      <!-- ── LEASE TIMELINE ── -->
+      <div class="stat-card" style="padding:26px 28px;margin-top:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div class="stat-label">Lease Timeline</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button onclick="timelineYear(-1)" style="background:none;border:1px solid rgba(127,85,57,0.2);border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--text-mid);font-size:0.9rem;display:flex;align-items:center;justify-content:center;padding:0">‹</button>
+            <span id="timeline-year-label" style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;color:var(--text-dark);min-width:42px;text-align:center"></span>
+            <button onclick="timelineYear(1)"  style="background:none;border:1px solid rgba(127,85,57,0.2);border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--text-mid);font-size:0.9rem;display:flex;align-items:center;justify-content:center;padding:0">›</button>
+          </div>
+        </div>
+        <div id="lease-timeline-wrap" style="overflow-x:auto"></div>
+      </div>
+
     </div>
   </div>
 
   <div id="view-apartments" style="display:none">
     <div class="topbar">
-      <h2>Apartments</h2>
+      <h2>Properties</h2>
       <div class="topbar-right">
           <div class="action-menu-wrap">
             <button class="btn action-menu-btn" onclick="toggleActionMenu(event)">
@@ -759,6 +842,195 @@ function updateStats() {
   document.getElementById('stat-vacant').textContent = apartments.filter(a=>a.status==='vacant').length;
   const rev = apartments.filter(a=>a.status!=='vacant').reduce((s,a)=>s+a.price,0);
   document.getElementById('stat-revenue').textContent = '$'+rev.toLocaleString();
+  updateDashboardCharts();
+}
+
+let _dashOccChart = null, _dashPayChart = null;
+let _tlYear = new Date().getFullYear();
+
+function timelineYear(delta) {
+  _tlYear += delta;
+  renderLeaseTimeline();
+}
+
+function renderLeaseTimeline() {
+  const wrap = document.getElementById('lease-timeline-wrap');
+  const lbl  = document.getElementById('timeline-year-label');
+  if (!wrap || !lbl) return;
+  lbl.textContent = _tlYear;
+
+  const active = apartments.filter(a => a.status !== 'vacant' && a.leaseStart);
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const isDark = document.body.classList.contains('dark');
+
+  const ROW_H   = 32;
+  const ROW_GAP = 6;
+  const LABEL_W = 130;
+  const ARROW_W = 18;
+  const GRID_W  = 600;
+  const COL_W   = GRID_W / 12;
+  const TOTAL_W = LABEL_W + GRID_W + ARROW_W + 12;
+  const PAD_TOP = 28;
+  const statusColor = { leased: '#656d4a', ending: '#d4933a', vacant: '#c0392b' };
+  const textColor   = isDark ? '#e8d8c8' : '#2c2015';
+  const mutedColor  = isDark ? 'rgba(232,216,200,0.35)' : 'rgba(90,74,58,0.4)';
+  const gridColor   = isDark ? 'rgba(232,216,200,0.07)' : 'rgba(127,85,57,0.08)';
+  const headerColor = isDark ? 'rgba(232,216,200,0.5)' : 'rgba(90,74,58,0.6)';
+  const todayColor  = '#d4933a';
+
+  const yearStart = new Date(_tlYear, 0, 1);
+  const yearEnd   = new Date(_tlYear, 11, 31, 23, 59, 59);
+
+  const today = new Date();
+  const todayFrac = (today - yearStart) / (yearEnd - yearStart + 86400000);
+  const todayX = LABEL_W + todayFrac * GRID_W;
+  const showToday = todayFrac >= 0 && todayFrac <= 1;
+
+  const SVG_H = PAD_TOP + active.length * (ROW_H + ROW_GAP) + 10;
+
+  let bars = '';
+  active.forEach((a, i) => {
+    const y  = PAD_TOP + i * (ROW_H + ROW_GAP);
+    const cy = y + ROW_H / 2;
+    const color = statusColor[a.status] || '#656d4a';
+
+    const s = new Date(a.leaseStart + 'T00:00:00');
+    const e = a.leaseEnd ? new Date(a.leaseEnd + 'T00:00:00') : null;
+
+    const sFrac = (s - yearStart) / (yearEnd - yearStart + 86400000);
+    const eFrac = e ? (e - yearStart) / (yearEnd - yearStart + 86400000) : null;
+
+    const startsBeforeYearEnd = sFrac <= 1;
+    const endsAfterYearStart  = eFrac === null || eFrac >= 0;
+    const visibleInYear = startsBeforeYearEnd && endsAfterYearStart;
+
+    const barLeft  = Math.max(0, Math.min(1, sFrac));
+    const barRight = eFrac !== null ? Math.max(0, Math.min(1, eFrac)) : 1;
+
+    const overflowLeft  = sFrac < 0;
+    const overflowRight = eFrac === null || eFrac > 1;
+
+    const bx = LABEL_W + barLeft  * GRID_W;
+    const bw = Math.max(4, (barRight - barLeft) * GRID_W);
+
+    const name = a.name.length > 18 ? a.name.slice(0, 17) + '\u2026' : a.name;
+
+    const rowBg = i % 2 === 0
+      ? (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(127,85,57,0.025)')
+      : 'none';
+    bars += `<rect x="0" y="${y}" width="${TOTAL_W}" height="${ROW_H}" fill="${rowBg}" rx="4"/>`;
+    bars += `<text x="${LABEL_W - 10}" y="${cy + 4.5}" text-anchor="end" font-family="DM Sans,sans-serif" font-size="12" fill="${visibleInYear ? textColor : mutedColor}">${name}</text>`;
+
+    if (!visibleInYear) return;
+
+    bars += `<rect x="${bx}" y="${y + 5}" width="${bw}" height="${ROW_H - 10}" fill="${color}" rx="5" opacity="0.85"/>`;
+
+    if (overflowLeft) {
+      bars += `<polygon points="${bx},${cy} ${bx+9},${cy-5} ${bx+9},${cy+5}" fill="${color}" opacity="0.7"/>`;
+    }
+    if (overflowRight) {
+      const ax = bx + bw;
+      bars += `<polygon points="${ax+10},${cy} ${ax+1},${cy-5} ${ax+1},${cy+5}" fill="${color}" opacity="0.9"/>`;
+      bars += `<line x1="${ax}" y1="${cy}" x2="${ax+10}" y2="${cy}" stroke="${color}" stroke-width="1.5" stroke-dasharray="2,2" opacity="0.6"/>`;
+    }
+
+    if (bw > 52 && e) {
+      const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const dateStr = overflowLeft ? '\u2192 ' + fmt(e) : overflowRight ? fmt(s) + ' \u2192' : fmt(s) + ' \u2013 ' + fmt(e);
+      bars += `<text x="${bx + bw/2}" y="${cy + 4.5}" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="10" fill="#fff" font-weight="500" opacity="0.9">${dateStr}</text>`;
+    }
+  });
+
+  let grid = '';
+  MONTHS.forEach((m, mi) => {
+    const x = LABEL_W + mi * COL_W;
+    grid += `<line x1="${x}" y1="${PAD_TOP - 8}" x2="${x}" y2="${SVG_H - 4}" stroke="${gridColor}" stroke-width="1"/>`;
+    grid += `<text x="${x + COL_W/2}" y="${PAD_TOP - 10}" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="11" fill="${headerColor}" font-weight="500">${m}</text>`;
+  });
+  grid += `<line x1="${LABEL_W + GRID_W}" y1="${PAD_TOP - 8}" x2="${LABEL_W + GRID_W}" y2="${SVG_H - 4}" stroke="${gridColor}" stroke-width="1"/>`;
+
+  const todaySvg = showToday
+    ? `<line x1="${todayX}" y1="${PAD_TOP - 8}" x2="${todayX}" y2="${SVG_H - 4}" stroke="${todayColor}" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.8"/>
+       <text x="${todayX}" y="${PAD_TOP - 12}" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="9.5" fill="${todayColor}" font-weight="600">Today</text>`
+    : '';
+
+  const empty = active.length === 0
+    ? `<text x="${LABEL_W + GRID_W/2}" y="${PAD_TOP + 36}" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="13" fill="${mutedColor}">No active leases</text>`
+    : '';
+
+  wrap.innerHTML = `<svg viewBox="0 0 ${TOTAL_W} ${Math.max(SVG_H, PAD_TOP + 60)}" width="100%" style="display:block;overflow:visible">${grid}${todaySvg}${bars}${empty}</svg>`;
+}
+
+function updateDashboardCharts() {
+  const leased  = apartments.filter(a=>a.status==='leased').length;
+  const ending  = apartments.filter(a=>a.status==='ending').length;
+  const vacant  = apartments.filter(a=>a.status==='vacant').length;
+  const total   = apartments.length;
+
+  const activeTenants = apartments.filter(a=>a.status!=='vacant');
+  const paid       = activeTenants.filter(a=>a.payment==='paid').length;
+  const processing = activeTenants.filter(a=>a.payment==='processing').length;
+  const unpaid     = activeTenants.filter(a=>a.payment==='unpaid').length;
+  const payTotal   = activeTenants.length;
+
+  // Update labels
+  document.getElementById('dash-occ-center-val').textContent = total;
+  document.getElementById('dash-occ-leased').textContent     = leased;
+  document.getElementById('dash-occ-ending').textContent     = ending;
+  document.getElementById('dash-occ-vacant').textContent     = vacant;
+  document.getElementById('dash-pay-center-val').textContent = payTotal;
+  document.getElementById('dash-pay-paid').textContent       = paid;
+  document.getElementById('dash-pay-processing').textContent = processing;
+  document.getElementById('dash-pay-unpaid').textContent     = unpaid;
+
+  const isDark = document.body.classList.contains('dark');
+  const emptyColor = isDark ? 'rgba(237,224,212,0.08)' : 'rgba(127,85,57,0.1)';
+
+  const occData   = (leased+ending+vacant) > 0 ? [leased, ending, vacant] : [1];
+  const occColors = (leased+ending+vacant) > 0 ? ['#656d4a','#d4933a','#c0392b'] : [emptyColor];
+  const payData   = (paid+processing+unpaid) > 0 ? [paid, processing, unpaid] : [1];
+  const payColors = (paid+processing+unpaid) > 0 ? ['#656d4a','#3a6bc4','#c0392b'] : [emptyColor];
+
+  const donutOpts = {
+    cutout: '72%',
+    plugins: { legend: { display: false }, tooltip: { enabled: (leased+ending+vacant) > 0 } },
+    animation: { duration: 500 }
+  };
+
+  if (_dashOccChart) { _dashOccChart.destroy(); }
+  const occCtx = document.getElementById('dash-occupancy-chart');
+  if (occCtx) {
+    _dashOccChart = new Chart(occCtx, {
+      type: 'doughnut',
+      data: { datasets: [{ data: occData, backgroundColor: occColors, borderWidth: 0, hoverOffset: 4 }] },
+      options: { ...donutOpts, plugins: { ...donutOpts.plugins, tooltip: {
+        enabled: (leased+ending+vacant) > 0,
+        callbacks: { label: ctx => {
+          const labels = ['Leased','Ending Soon','Vacant'];
+          return ` ${labels[ctx.dataIndex]}: ${ctx.parsed}`;
+        }},
+        backgroundColor: '#414833', bodyColor: '#ede0d4', padding: 10, cornerRadius: 8, displayColors: false
+      }}}
+    });
+  }
+
+  if (_dashPayChart) { _dashPayChart.destroy(); }
+  const payCtx = document.getElementById('dash-payment-chart');
+  if (payCtx) {
+    _dashPayChart = new Chart(payCtx, {
+      type: 'doughnut',
+      data: { datasets: [{ data: payData, backgroundColor: payColors, borderWidth: 0, hoverOffset: 4 }] },
+      options: { ...donutOpts, plugins: { ...donutOpts.plugins, tooltip: {
+        enabled: (paid+processing+unpaid) > 0,
+        callbacks: { label: ctx => {
+          const labels = ['Paid','Processing','Unpaid'];
+          return ` ${labels[ctx.dataIndex]}: ${ctx.parsed}`;
+        }},
+        backgroundColor: '#414833', bodyColor: '#ede0d4', padding: 10, cornerRadius: 8, displayColors: false
+      }}}
+    });
+  }
+  renderLeaseTimeline();
 }
 
 // ── Filter ─────────────────────────────────────────────────────
@@ -766,7 +1038,7 @@ function filterApts(f,el) {
   currentFilter=f;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
-  renderGrid('apt-grid'); renderGrid('apt-grid-2');
+  renderGrid('apt-grid-2');
 }
 
 // ── Detail modal ───────────────────────────────────────────────
@@ -1019,7 +1291,7 @@ async function addApartment() {
   apartments.push(normalize(data[0]));
   closeModal('add-modal');
   ['f-name','f-address','f-price','f-tenant','f-start','f-end'].forEach(i=>document.getElementById(i).value='');
-  updateStats(); renderGrid('apt-grid');
+  updateStats();
 }
 
 // ── Payments table ─────────────────────────────────────────────
@@ -1048,6 +1320,7 @@ function showView(v, el) {
   if(el) el.classList.add('active');
   if(v==='payments')  renderPaymentsTable();
   if(v==='apartments') renderGrid('apt-grid-2');
+  if(v==='dashboard') updateDashboardCharts();
 }
 
 document.querySelectorAll('.modal-overlay').forEach(el=>{
@@ -1055,7 +1328,6 @@ document.querySelectorAll('.modal-overlay').forEach(el=>{
 });
 
 updateStats();
-renderGrid('apt-grid');
 
 // ── Action menu ────────────────────────────────────────────────
 function toggleActionMenu(e) {
@@ -1086,7 +1358,7 @@ function addProperty() {
   closeModal('add-property-modal');
   document.getElementById('fp-address').value = '';
   document.getElementById('fp-name').value = '';
-  updateStats(); renderGrid('apt-grid'); renderGrid('apt-grid-2');
+  updateStats(); renderGrid('apt-grid-2');
 }
 
 function openRemovePropertyModal() {
@@ -1112,7 +1384,7 @@ function openRemovePropertyModal() {
 
 function removeProperty(address) {
   apartments = apartments.filter(a => a.address !== address);
-  updateStats(); renderGrid('apt-grid'); renderGrid('apt-grid-2');
+  updateStats(); renderGrid('apt-grid-2');
   openRemovePropertyModal(); // refresh list
 }
 
@@ -1143,7 +1415,6 @@ async function removeApartment(id) {
     document.getElementById('remove-list').innerHTML = '<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;text-align:center;padding:20px 0">No apartments to remove.</p>';
   }
   updateStats();
-  renderGrid('apt-grid');
   renderGrid('apt-grid-2');
 }
 
@@ -1244,7 +1515,6 @@ function saveEdit() {
   document.getElementById('e-id').dataset.histIdx = '';
   closeModal('edit-modal');
   updateStats();
-  renderGrid('apt-grid');
   renderGrid('apt-grid-2');
 }
 
@@ -1252,6 +1522,7 @@ function saveEdit() {
 function toggleDark() {
   document.body.classList.toggle('dark');
   localStorage.setItem('estately-dark', document.body.classList.contains('dark') ? '1' : '0');
+  updateDashboardCharts();
 }
 if(localStorage.getItem('estately-dark')=== '1') document.body.classList.add('dark');
 
@@ -1286,7 +1557,6 @@ async function loadApartments() {
       }
     ];
     updateStats();
-    renderGrid('apt-grid');
     return;
   }
   try {
@@ -1294,7 +1564,6 @@ async function loadApartments() {
     const data = await res.json();
     apartments = data.map(normalize);
     updateStats();
-    renderGrid('apt-grid');
   } catch(e) {
     console.error('Could not connect to backend:', e);
     alert('Could not connect to the backend. Please try again.');
@@ -1475,7 +1744,6 @@ async function deleteTenantRow(aptId, idx) {
     })
   });
   updateStats();
-  renderGrid('apt-grid');
   renderGrid('apt-grid-2');
   openDetail(aptId);
 }

@@ -14,9 +14,9 @@
     [x] - Add tenant
     [x] - Remove tenant
     [x] - Edit tenant
-[ ] - Split history/details 23/4 high
+[1] - Split history/details 24/4 high
 [ ] - Excel support 28/4 due Med
-[ ] - Split dashboard/apartments 23/4 high
-[ ] - Hamburger UI 24/4 high
+[x] - Split dashboard/apartments 24/4 high
+[2] - Hamburger UI 25/4 high
 [ ] - Optimization frontend 26/4 med
 
