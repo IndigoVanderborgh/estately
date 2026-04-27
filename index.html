@@ -200,6 +200,8 @@
 
   /* ── MAIN ── */
   .main { margin-left: 0; min-height: 100vh; padding-top: 60px; }
+  body.demo-active .main { padding-top: 94px; }
+  body.demo-active .sidebar { top: 106px; }
   .topbar { background:var(--white); padding:18px 36px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(127,85,57,0.12); }
   .topbar h2 { font-family:'Playfair Display',serif; font-size:1.35rem; color:var(--text-dark); font-weight:600; }
   .topbar-right { display:flex; align-items:center; gap:16px; }
@@ -391,7 +393,15 @@
 
   /* ── DEMO MODE ── */
   .btn-disabled { opacity: 0.35 !important; cursor: not-allowed !important; pointer-events: none !important; transform: none !important; }
-  .demo-banner { background: #f5c518; color: #5a3e00; font-size: 0.75rem; padding: 8px 16px; text-align: center; letter-spacing: 1px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; font-weight: 600; }
+  .demo-banner {
+    background: #f5c518; color: #5a3e00;
+    font-size: 0.75rem; padding: 7px 16px;
+    text-align: center; letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: 'DM Sans', sans-serif; font-weight: 600;
+    position: fixed; top: 60px; left: 0; right: 0;
+    z-index: 140;
+  }
 
   /* Remove modal list */
   .remove-list { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; margin-bottom: 8px; }
@@ -1739,6 +1749,7 @@ async function login() {
 function applyDemoRestrictions() {
   // Show demo banner
   document.getElementById('demo-banner').style.display = 'block';
+  document.body.classList.add('demo-active');
   // Disable all action menu buttons
   document.querySelectorAll('.action-item').forEach(btn => btn.classList.add('btn-disabled'));
 }
