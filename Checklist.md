@@ -16,7 +16,7 @@
     [x] - Edit tenant
 [WIP] - Split history/details 28/4 high 
 [ ] - Excel support 28/4 due Med
-[x] - Split dashboard/apartments 24/4 high
-[x] - Hamburger UI 29/4 high
+[x] - Split dashboard/apartments
+[x] - Hamburger UI
 [ ] - Optimization frontend 30/4 med
 

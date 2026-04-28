@@ -840,35 +840,21 @@
   <div id="view-history" style="display:none">
     <div class="topbar">
       <h2>History</h2>
-      <div class="topbar-right">
-        <div class="action-menu-wrap">
-          <button class="btn action-menu-btn" onclick="toggleActionMenu(event)">
-            Actions
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="margin-left:6px"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="action-menu" id="action-menu-history">
-            <button class="action-item" onclick="closeActionMenu();openAddModal()">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
-              Add Apartment
-            </button>
-            <button class="action-item" onclick="closeActionMenu();openAddPropertyModal()">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-              Add Property
-            </button>
-            <div class="action-divider"></div>
-            <button class="action-item action-item-danger" onclick="closeActionMenu();openRemoveModal()">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-              Remove Apartment
-            </button>
-            <button class="action-item action-item-danger" onclick="closeActionMenu();openRemovePropertyModal()">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-              Remove Property
-            </button>
-          </div>
+    </div>
+    <div class="content">
+      <!-- Property selector -->
+      <div style="margin-bottom:28px">
+        <div class="section-title" style="margin-bottom:14px">Select Property</div>
+        <div id="history-property-list" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+      </div>
+      <!-- History content per property -->
+      <div id="history-content">
+        <div class="empty-state" style="padding:60px 0">
+          <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><path d="M3.05 11a9 9 0 1 0 .5-3"/><path d="M3 4v4h4"/></svg>
+          <p>Select a property above to view its history.</p>
         </div>
       </div>
     </div>
-    <div class="content"></div>
   </div>
 
   <div id="view-payments" style="display:none">
@@ -1055,8 +1041,7 @@ function renderAptCard(a) {
       <div class="info-row"><span class="info-label">Payment</span>${paymentPill(a.payment)}</div>
     </div>
     <div class="apt-footer">
-      <button class="btn btn-outline" onclick="openDetail(${a.id})">View History</button>
-      <button class="btn"             onclick="openDetail(${a.id})">Details</button>
+      <button class="btn" style="width:100%" onclick="openDetail(${a.id})">Details</button>
     </div>
   </div>`;
 }
@@ -1260,8 +1245,8 @@ function openDetail(id) {
       </div>
     </div>`:''}
 
-    <!-- TENURE BREAKDOWN -->
-    ${hasHistory ? `
+    <!-- TENURE BREAKDOWN (moved to History tab) -->
+    ${false ? `
     <div class="section-divider">Tenant Type Breakdown</div>
     <div class="tenure-summary">
       <div class="tenure-donut-wrap">
@@ -1291,19 +1276,12 @@ function openDetail(id) {
       </div>
     </div>` : ''}
 
-    <!-- PRICE CHART -->
-    ${hasHistory ? `
+    <!-- PRICE CHART (moved to History tab) -->
+    ${false ? `
     <div class="section-divider">Rent Price History</div>
     <div class="chart-wrap"><canvas id="priceChart" height="150"></canvas></div>` : ''}
 
-    <!-- HISTORY TABLE -->
-    <div class="section-divider" style="margin-top:${hasHistory?'20px':'0'}">Tenant &amp; Lease History</div>
-    ${hasHistory
-      ? `<table class="history-table">
-          <thead><tr><th>Tenant</th><th>Rent</th><th>Start</th><th>End</th><th>Duration</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>${histRows}</tbody>
-        </table>`
-      : `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:12px 0">No history recorded yet.</p>`}
+    <!-- HISTORY TABLE (moved to History tab) -->
 
   <div style="margin-top:24px;border-top:1px solid rgba(127,85,57,0.1);padding-top:20px">
     <div class="section-divider" style="margin-top:0">Lease Documents</div>
@@ -1338,89 +1316,6 @@ function openDetail(id) {
   `;
 
   document.getElementById('detail-modal').classList.add('open');
-
-  if(hasHistory) {
-    requestAnimationFrame(() => {
-      // ── Donut chart ──
-      const dCtx = document.getElementById('donutChart').getContext('2d');
-      const donut = new Chart(dCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Long-Term','Short-Term'],
-          datasets:[{
-            data: [tc.long, tc.short || 0.001],
-            backgroundColor: ['#2d5ba0','#e8a838'],
-            borderColor: ['#faf7f4','#faf7f4'],
-            borderWidth: 3,
-            hoverOffset: 6
-          }]
-        },
-        options: {
-          cutout: '68%',
-          responsive: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: { label: ctx => ` ${ctx.label}: ${tc.short===0&&ctx.dataIndex===1?0:ctx.parsed} tenant${(ctx.parsed===1)?'':'s'}` },
-              backgroundColor: '#414833', titleColor: '#ede0d4', bodyColor: '#a68a64',
-              padding: 10, cornerRadius: 8, displayColors: false
-            }
-          }
-        }
-      });
-      activeCharts.push(donut);
-
-      // ── Line chart ──
-      const lCtx = document.getElementById('priceChart').getContext('2d');
-      const labels = a.history.map(h => h.tenant.split(' ')[0] + ' \'' + (h.from||'').slice(2,4));
-      const prices = a.history.map(h => h.price);
-      const dotColors = a.history.map(h => inferTenure(h)==='short' ? '#e8a838' : '#2d5ba0');
-
-      const line = new Chart(lCtx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets:[{
-            label: 'Monthly Rent',
-            data: prices,
-            borderColor: '#7f5539',
-            backgroundColor: 'rgba(127,85,57,0.07)',
-            pointBackgroundColor: dotColors,
-            pointBorderColor: '#faf7f4',
-            pointBorderWidth: 2,
-            pointRadius: 8,
-            pointHoverRadius: 10,
-            borderWidth: 2.5,
-            fill: true,
-            tension: 0.4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                title: items => a.history[items[0].dataIndex].tenant,
-                label: ctx => {
-                  const h = a.history[ctx.dataIndex];
-                  return [` $${ctx.parsed.y.toLocaleString()}/mo`, ` ${inferTenure(h)==='short'?'Short-Term':'Long-Term'} · ${tenureDuration(h)}`];
-                }
-              },
-              backgroundColor: '#414833', titleColor: '#ede0d4', bodyColor: '#a68a64',
-              padding: 12, cornerRadius: 8, displayColors: false
-            }
-          },
-          scales: {
-            x: { ticks:{color:'#5a4a3a',font:{family:'DM Sans',size:11}}, grid:{display:false}, border:{color:'rgba(127,85,57,0.15)'} },
-            y: { ticks:{color:'#5a4a3a',font:{family:'DM Sans',size:11},callback:v=>'$'+v.toLocaleString()}, grid:{color:'rgba(127,85,57,0.08)'}, border:{display:false} }
-          }
-        }
-      });
-      activeCharts.push(line);
-    });
-  }
 }
 
 // ── Add apartment ──────────────────────────────────────────────
@@ -1494,6 +1389,7 @@ function showView(v, el) {
   if(v==='payments')  renderPaymentsTable();
   if(v==='apartments') renderGrid('apt-grid-2');
   if(v==='dashboard') updateDashboardCharts();
+  if(v==='history')   renderHistoryPropertyList();
   closeMenu();
 }
 
@@ -1689,9 +1585,14 @@ function saveEdit() {
 
   // Clear the histIdx after saving
   document.getElementById('e-id').dataset.histIdx = '';
+  const src = document.getElementById('e-id').dataset.source;
+  document.getElementById('e-id').dataset.source = '';
   closeModal('edit-modal');
   updateStats();
   renderGrid('apt-grid-2');
+  if (src === 'history' && _selectedHistoryAddress) {
+    renderHistoryForProperty(_selectedHistoryAddress);
+  }
 }
 
 // ── Dark mode ──────────────────────────────────────────────────
@@ -2111,6 +2012,10 @@ updateStats = function() {
   updateExpiryList();
   updateUnpaidList();
   updateOccupancyTrend();
+  // Refresh history property list if that view is active
+  if (document.getElementById('view-history') && document.getElementById('view-history').style.display !== 'none') {
+    renderHistoryPropertyList();
+  }
 };
 
 // Also hook into toggleDark so trend chart colors refresh
@@ -2119,6 +2024,289 @@ toggleDark = function() {
   _origToggleDark();
   updateOccupancyTrend();
 };
+
+// ── History Tab ─────────────────────────────────────────────────
+let _historyCharts = [];
+let _selectedHistoryAddress = null;
+
+function renderHistoryPropertyList() {
+  const addresses = [...new Set(apartments.map(a => a.address))];
+  const container = document.getElementById('history-property-list');
+  if (!container) return;
+  if (!addresses.length) {
+    container.innerHTML = '<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem">No properties found.</p>';
+    return;
+  }
+  container.innerHTML = addresses.map(addr => {
+    const isSelected = addr === _selectedHistoryAddress;
+    return `<button class="tab${isSelected ? ' active' : ''}" style="font-size:0.82rem;padding:7px 18px" onclick="selectHistoryProperty('${addr.replace(/'/g,"\\'")}',this)">${addr}</button>`;
+  }).join('');
+  // Auto-select if previous selection still valid
+  if (_selectedHistoryAddress && addresses.includes(_selectedHistoryAddress)) {
+    renderHistoryForProperty(_selectedHistoryAddress);
+  } else {
+    document.getElementById('history-content').innerHTML = `<div class="empty-state" style="padding:60px 0"><svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><path d="M3.05 11a9 9 0 1 0 .5-3"/><path d="M3 4v4h4"/></svg><p>Select a property above to view its history.</p></div>`;
+  }
+}
+
+function selectHistoryProperty(addr, el) {
+  _selectedHistoryAddress = addr;
+  document.querySelectorAll('#history-property-list .tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderHistoryForProperty(addr);
+}
+
+function renderHistoryForProperty(addr) {
+  const units = apartments.filter(a => a.address === addr);
+  if (!units.length) return;
+
+  // Destroy old history charts
+  _historyCharts.forEach(c => { try { c.destroy(); } catch(e) {} });
+  _historyCharts = [];
+
+  const allHistory = units.flatMap(a => a.history.map(h => ({...h, unitName: a.name, unitId: a.id})));
+  const hasHistory = allHistory.length > 0;
+  const tc = {
+    total: allHistory.length,
+    long:  allHistory.filter(h => inferTenure(h) === 'long').length,
+    short: allHistory.filter(h => inferTenure(h) === 'short').length
+  };
+
+  const container = document.getElementById('history-content');
+
+  let html = `<div style="margin-bottom:6px">
+    <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--text-dark);margin-bottom:4px">${addr}</div>
+    <div style="font-size:0.8rem;color:var(--text-mid)">${units.length} unit${units.length!==1?'s':''} · ${tc.total} total tenant record${tc.total!==1?'s':''}</div>
+  </div>`;
+
+  // ── 1. TENANT BREAKDOWN ──
+  html += `<div class="section-divider" style="margin-top:24px">Tenant Type Breakdown</div>`;
+  if (hasHistory) {
+    html += `<div class="tenure-summary">
+      <div class="tenure-donut-wrap">
+        <canvas id="hist-donutChart" width="130" height="130"></canvas>
+        <div class="tenure-donut-center">
+          <span class="big">${tc.total}</span>
+          <span class="small">Tenants</span>
+        </div>
+      </div>
+      <div class="tenure-stats">
+        <div class="tenure-stat-row">
+          <div class="tenure-stat-dot" style="background:#2d5ba0"></div>
+          <div class="tenure-stat-info">
+            <div class="tenure-stat-label">Long-Term <span style="font-weight:400;font-style:italic">(6+ months)</span></div>
+            <div class="tenure-stat-val">${tc.long}</div>
+            <div class="tenure-stat-sub">${tc.total ? Math.round(tc.long/tc.total*100) : 0}% of all tenants</div>
+          </div>
+        </div>
+        <div class="tenure-stat-row">
+          <div class="tenure-stat-dot" style="background:#e8a838"></div>
+          <div class="tenure-stat-info">
+            <div class="tenure-stat-label">Short-Term <span style="font-weight:400;font-style:italic">(&lt;6 months)</span></div>
+            <div class="tenure-stat-val">${tc.short}</div>
+            <div class="tenure-stat-sub">${tc.total ? Math.round(tc.short/tc.total*100) : 0}% of all tenants</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  } else {
+    html += `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:10px 0">No tenant history recorded yet.</p>`;
+  }
+
+  // ── 2. RENT PRICE HISTORY ──
+  html += `<div class="section-divider" style="margin-top:24px">Rent Price History</div>`;
+  if (hasHistory) {
+    html += `<div class="chart-wrap" style="margin-bottom:8px"><canvas id="hist-priceChart" height="150"></canvas></div>`;
+  } else {
+    html += `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:10px 0">No rent history recorded yet.</p>`;
+  }
+
+  // ── 3. TENANT & LEASE HISTORY ──
+  html += `<div class="section-divider" style="margin-top:24px">Tenant &amp; Lease History</div>`;
+  if (hasHistory) {
+    const histRows = allHistory.map((h, idx) => {
+      const t = inferTenure(h);
+      const unitId = h.unitId;
+      // Find the real index of this entry in the apartment's history array
+      const apt = apartments.find(a => a.id === unitId);
+      const realIdx = apt ? apt.history.indexOf(h) : idx;
+      const disabledClass = isDemo() ? 'btn-disabled' : '';
+      return `<tr class="${h.current?'current-row':''}">
+        <td><strong>${h.unitName}</strong></td>
+        <td>${h.tenant}</td>
+        <td>$${h.price.toLocaleString()}/mo</td>
+        <td>${formatDate(h.from)}</td>
+        <td>${formatDate(h.to)}</td>
+        <td>${tenureDuration(h)}</td>
+        <td>${ttBadge(t)}</td>
+        <td>${h.current?'<span class="status-badge status-leased" style="font-size:0.7rem">Current</span>':'<span style="color:var(--text-mid);font-size:0.82rem">Ended</span>'}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-outline" style="padding:4px 10px;font-size:0.72rem" onclick="historyViewDetail(${unitId},${realIdx})">View</button>
+          <button class="btn btn-outline ${disabledClass}" style="padding:4px 10px;font-size:0.72rem" onclick="historyEditTenantRow(${unitId},${realIdx})">Edit</button>
+          <button class="btn btn-remove ${disabledClass}" style="padding:4px 10px;font-size:0.72rem" onclick="historyDeleteTenantRow(${unitId},${realIdx})">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+    html += `<div style="overflow-x:auto"><table class="history-table">
+      <thead><tr><th>Unit</th><th>Tenant</th><th>Rent</th><th>Start</th><th>End</th><th>Duration</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${histRows}</tbody>
+    </table></div>`;
+    // Add Tenant button below the table
+    const firstUnitId = units[0]?.id;
+    html += `<div style="display:flex;justify-content:flex-end;margin-top:14px">
+      <button class="btn ${isDemo()?'btn-disabled':''}" onclick="historyAddTenant(${firstUnitId})">+ Add Tenant</button>
+    </div>`;
+  } else {
+    html += `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:10px 0">No history recorded yet.</p>`;
+    const firstUnitId = units[0]?.id;
+    if (firstUnitId) {
+      html += `<div style="display:flex;justify-content:flex-end;margin-top:10px">
+        <button class="btn ${isDemo()?'btn-disabled':''}" onclick="historyAddTenant(${firstUnitId})">+ Add Tenant</button>
+      </div>`;
+    }
+  }
+
+  // ── 4. LEASE DOCUMENTS ──
+  html += `<div class="section-divider" style="margin-top:24px">Lease Documents</div>`;
+  const allDocs = units.flatMap(a => (a.lease_docs||[]).map(doc => ({...doc, unitName: a.name, unitId: a.id})));
+  if (allDocs.length) {
+    html += `<div style="overflow-x:auto"><table class="history-table" style="margin-bottom:16px">
+      <thead><tr><th>Unit</th><th>Filename</th><th>Tenant</th><th>Uploaded</th><th>Action</th></tr></thead>
+      <tbody>
+        ${allDocs.map(doc => `<tr>
+          <td><strong>${doc.unitName}</strong></td>
+          <td>${doc.filename}</td>
+          <td>${doc.tenant}</td>
+          <td>${doc.uploaded}</td>
+          <td style="display:flex;gap:8px">
+            <button class="btn btn-outline" style="padding:4px 10px;font-size:0.75rem" onclick="downloadLeaseByPath(${doc.unitId},'${doc.path}')">View</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+  } else {
+    html += `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:10px 0">No lease documents uploaded for this property.</p>`;
+  }
+
+  container.innerHTML = html;
+
+  // Render charts
+  if (hasHistory) {
+    requestAnimationFrame(() => {
+      // Donut
+      const dCtx = document.getElementById('hist-donutChart');
+      if (dCtx) {
+        const donut = new Chart(dCtx.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Long-Term','Short-Term'],
+            datasets:[{ data: [tc.long, tc.short || 0.001], backgroundColor: ['#2d5ba0','#e8a838'], borderColor: ['#faf7f4','#faf7f4'], borderWidth: 3, hoverOffset: 6 }]
+          },
+          options: {
+            cutout: '68%', responsive: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${tc.short===0&&ctx.dataIndex===1?0:ctx.parsed} tenant${ctx.parsed===1?'':'s'}` }, backgroundColor: '#414833', titleColor: '#ede0d4', bodyColor: '#a68a64', padding: 10, cornerRadius: 8, displayColors: false } }
+          }
+        });
+        _historyCharts.push(donut);
+      }
+      // Line
+      const lCtx = document.getElementById('hist-priceChart');
+      if (lCtx) {
+        const labels = allHistory.map(h => h.unitName.replace(/unit\s*/i,'') + ' ' + h.tenant.split(' ')[0] + (h.from ? ' \'' + h.from.slice(2,4) : ''));
+        const prices = allHistory.map(h => h.price);
+        const dotColors = allHistory.map(h => inferTenure(h)==='short' ? '#e8a838' : '#2d5ba0');
+        const isDark = document.body.classList.contains('dark');
+        const line = new Chart(lCtx.getContext('2d'), {
+          type: 'line',
+          data: { labels, datasets: [{ label: 'Monthly Rent', data: prices, borderColor: '#7f5539', backgroundColor: 'rgba(127,85,57,0.07)', pointBackgroundColor: dotColors, pointBorderColor: isDark?'#332d28':'#faf7f4', pointBorderWidth: 2, pointRadius: 7, pointHoverRadius: 9, borderWidth: 2.5, fill: true, tension: 0.4 }] },
+          options: {
+            responsive: true, maintainAspectRatio: true,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { title: items => allHistory[items[0].dataIndex].tenant, label: ctx => { const h = allHistory[ctx.dataIndex]; return [` $${ctx.parsed.y.toLocaleString()}/mo · ${h.unitName}`, ` ${inferTenure(h)==='short'?'Short-Term':'Long-Term'} · ${tenureDuration(h)}`]; } }, backgroundColor: '#414833', titleColor: '#ede0d4', bodyColor: '#a68a64', padding: 12, cornerRadius: 8, displayColors: false } },
+            scales: { x: { ticks:{color:'#5a4a3a',font:{family:'DM Sans',size:10}}, grid:{display:false}, border:{color:'rgba(127,85,57,0.15)'} }, y: { ticks:{color:'#5a4a3a',font:{family:'DM Sans',size:10},callback:v=>'$'+v.toLocaleString()}, grid:{color:'rgba(127,85,57,0.08)'}, border:{display:false} } }
+          }
+        });
+        _historyCharts.push(line);
+      }
+    });
+  }
+}
+
+// ── History Tab Action Wrappers ─────────────────────────────────
+// These mirror the detail modal actions but refresh the History tab instead
+
+function historyViewDetail(aptId, idx) {
+  // Open a read-only view modal for this specific tenant row
+  const apt = apartments.find(a => a.id === aptId);
+  if (!apt) return;
+  const h = apt.history[idx];
+  if (!h) return;
+  const t = inferTenure(h);
+  document.getElementById('modal-apt-name').textContent = apt.name + ' — ' + h.tenant;
+  document.getElementById('modal-apt-addr').textContent = apt.address;
+  document.getElementById('modal-detail-body').innerHTML = `
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px">
+      <div style="flex:1;min-width:120px;background:var(--cream);border-radius:10px;padding:14px 16px">
+        <div class="info-label" style="margin-bottom:6px">Tenant</div>
+        <strong style="font-size:0.95rem">${h.tenant}</strong>
+      </div>
+      <div style="flex:1;min-width:120px;background:var(--cream);border-radius:10px;padding:14px 16px">
+        <div class="info-label" style="margin-bottom:6px">Monthly Rent</div>
+        <strong style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--green-dark)">$${h.price.toLocaleString()}</strong>
+      </div>
+      <div style="flex:1;min-width:120px;background:var(--cream);border-radius:10px;padding:14px 16px">
+        <div class="info-label" style="margin-bottom:6px">Tenant Type</div>
+        ${ttBadge(t)}
+      </div>
+    </div>
+    <div style="background:var(--cream);border-radius:10px;padding:14px 16px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="info-label">Lease Period</div>
+          <span style="font-size:0.88rem">${formatDate(h.from)} – ${formatDate(h.to)}</span>
+        </div>
+        <div>
+          <div class="info-label">Duration</div>
+          <span style="font-size:0.88rem">${tenureDuration(h) || '—'}</span>
+        </div>
+        <div>
+          <div class="info-label">Status</div>
+          ${h.current ? '<span class="status-badge status-leased" style="font-size:0.75rem">Current</span>' : '<span style="color:var(--text-mid);font-size:0.85rem">Ended</span>'}
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <button class="btn btn-outline" onclick="closeModal('detail-modal')">Close</button>
+    </div>`;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function historyEditTenantRow(aptId, idx) {
+  // Same as openEditTenantRow but tags source as 'history' so saveEdit refreshes the right view
+  openEditTenantRow(aptId, idx);
+  document.getElementById('e-id').dataset.source = 'history';
+}
+
+async function historyDeleteTenantRow(aptId, idx) {
+  if (!confirm('Delete this tenant entry?')) return;
+  const apt = apartments.find(a => a.id === aptId);
+  if (!apt) return;
+  apt.history.splice(idx, 1);
+  if (!apt.history.find(h => h.current)) {
+    apt.tenant = '—'; apt.leaseStart = ''; apt.leaseEnd = ''; apt.status = 'vacant'; apt.payment = 'unpaid';
+  }
+  await fetch(`${API}/apartments/${aptId}`, {
+    method: 'PUT', headers: getHeaders(),
+    body: JSON.stringify({ history: apt.history, tenant: apt.tenant, lease_start: apt.leaseStart || null, lease_end: apt.leaseEnd || null, status: apt.status, payment: apt.payment })
+  });
+  updateStats();
+  renderGrid('apt-grid-2');
+  if (_selectedHistoryAddress) renderHistoryForProperty(_selectedHistoryAddress);
+}
+
+function historyAddTenant(aptId) {
+  openAddTenantModal(aptId);
+  document.getElementById('e-id').dataset.source = 'history';
+}
 
 checkAuth();</script>
 <!-- REMOVE MODAL -->
