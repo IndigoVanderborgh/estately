@@ -533,8 +533,13 @@
   .avg-tenancy-val { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 700; color: var(--green-dark); line-height: 1; }
   body.dark .avg-tenancy-val { color: var(--green-dark); }
 
-  /* Occupancy trend line chart */
-  .trend-wrap { height: 120px; position: relative; }
+  /* Demo-disabled inputs */
+  .form-input.input-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+  .form-group.input-disabled-wrap label { opacity: 0.5; }
 </style>
 </head>
 <body>
@@ -961,6 +966,22 @@
         <div class="form-group"><label class="form-label">Lease End</label><input class="form-input" id="f-end" type="date"></div>
         <div class="form-group"></div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:6px">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9V6a2 2 0 012-2h14a2 2 0 012 2v3"/><path d="M3 9h18v9H3z"/></svg>
+            Bedrooms
+          </label>
+          <input class="form-input" id="f-bedrooms" type="number" min="0" max="20" placeholder="e.g. 2">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:6px">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12h16v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6z"/><path d="M4 12V7a2 2 0 012-2h2a2 2 0 012 2v5"/></svg>
+            Bathrooms
+          </label>
+          <input class="form-input" id="f-bathrooms" type="number" min="0" max="20" step="0.5" placeholder="e.g. 1.5">
+        </div>
+      </div>
       <button class="btn" style="width:100%;padding:12px;font-size:0.95rem;margin-top:8px" onclick="addApartment()">Add Apartment</button>
     </div>
   </div>
@@ -1005,6 +1026,8 @@ function normalize(a) {
     ...a,
     leaseStart: a.lease_start || '',
     leaseEnd:   a.lease_end   || '',
+    bedrooms:   a.bedrooms   ?? null,
+    bathrooms:  a.bathrooms  ?? null,
   };
 }
 
@@ -1066,6 +1089,7 @@ function renderAptCard(a) {
       <div>
         <div class="apt-name">${a.name}</div>
         <div class="apt-address">${a.address}</div>
+        ${(a.bedrooms != null || a.bathrooms != null) ? `<div style="display:flex;gap:10px;margin-top:5px">${a.bedrooms != null ? `<span style="font-size:0.72rem;color:var(--text-mid);display:flex;align-items:center;gap:3px"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9V6a2 2 0 012-2h14a2 2 0 012 2v3"/><path d="M3 9h18v9H3z"/></svg>${a.bedrooms} bed</span>` : ''}${a.bathrooms != null ? `<span style="font-size:0.72rem;color:var(--text-mid);display:flex;align-items:center;gap:3px"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12h16v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6z"/><path d="M4 12V7a2 2 0 012-2h2a2 2 0 012 2v5"/></svg>${a.bathrooms} bath</span>` : ''}</div>` : ''}
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         ${statusLabel(a.status)}
@@ -1271,6 +1295,13 @@ function openDetail(id) {
       <div style="flex:1;min-width:120px;background:var(--cream);border-radius:10px;padding:14px 16px">
         <div class="info-label" style="margin-bottom:6px">Payment</div>${paymentPill(a.payment)}
       </div>
+      ${(a.bedrooms != null || a.bathrooms != null) ? `<div style="flex:1;min-width:120px;background:var(--cream);border-radius:10px;padding:14px 16px">
+        <div class="info-label" style="margin-bottom:6px">Layout</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          ${a.bedrooms != null ? `<span style="font-size:0.88rem;font-weight:500;color:var(--text-dark);display:flex;align-items:center;gap:5px"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9V6a2 2 0 012-2h14a2 2 0 012 2v3"/><path d="M3 9h18v9H3z"/></svg>${a.bedrooms} Bedroom${a.bedrooms !== 1 ? 's' : ''}</span>` : ''}
+          ${a.bathrooms != null ? `<span style="font-size:0.88rem;font-weight:500;color:var(--text-dark);display:flex;align-items:center;gap:5px"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12h16v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6z"/><path d="M4 12V7a2 2 0 012-2h2a2 2 0 012 2v5"/></svg>${a.bathrooms} Bathroom${a.bathrooms !== 1 ? 's' : ''}</span>` : ''}
+        </div>
+      </div>` : ''}
     </div>
 
     <!-- CURRENT TENANT -->
@@ -1379,17 +1410,21 @@ async function addApartment() {
   const payment = document.getElementById('f-payment').value;
   const start   = document.getElementById('f-start').value;
   const end     = document.getElementById('f-end').value;
+  const bedroomsVal  = document.getElementById('f-bedrooms').value;
+  const bathroomsVal = document.getElementById('f-bathrooms').value;
+  const bedrooms  = bedroomsVal  !== '' ? parseFloat(bedroomsVal)  : null;
+  const bathrooms = bathroomsVal !== '' ? parseFloat(bathroomsVal) : null;
   const history = start ? [{tenant,price,from:start,to:end,tenure,current:true}] : [];
   const res  = await fetch(`${API}/apartments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, address, status, price, payment, tenant,
-      lease_start: start||null, lease_end: end||null, history })
+      lease_start: start||null, lease_end: end||null, history, bedrooms, bathrooms })
   });
   const data = await res.json();
   apartments.push(normalize(data[0]));
   closeModal('add-modal');
-  ['f-name','f-address','f-price','f-tenant','f-start','f-end'].forEach(i=>document.getElementById(i).value='');
+  ['f-name','f-address','f-price','f-tenant','f-start','f-end','f-bedrooms','f-bathrooms'].forEach(i=>document.getElementById(i).value='');
   updateStats();
 }
 
@@ -1691,6 +1726,8 @@ function openEditModal(id) {
   document.getElementById('e-payment').value  = a.payment;
   document.getElementById('e-start').value    = a.leaseStart || '';
   document.getElementById('e-end').value      = a.leaseEnd || '';
+  document.getElementById('e-bedrooms').value  = a.bedrooms  != null ? a.bedrooms  : '';
+  document.getElementById('e-bathrooms').value = a.bathrooms != null ? a.bathrooms : '';
   const currentH = a.history.find(h => h.current);
   document.getElementById('e-tenure').value   = currentH ? inferTenure(currentH) : 'long';
   document.getElementById('edit-modal').classList.add('open');
@@ -1709,6 +1746,10 @@ function saveEdit() {
   a.payment     = document.getElementById('e-payment').value;
   a.leaseStart  = document.getElementById('e-start').value;
   a.leaseEnd    = document.getElementById('e-end').value;
+  const bedroomsVal  = document.getElementById('e-bedrooms').value;
+  const bathroomsVal = document.getElementById('e-bathrooms').value;
+  a.bedrooms  = bedroomsVal  !== '' ? parseFloat(bedroomsVal)  : null;
+  a.bathrooms = bathroomsVal !== '' ? parseFloat(bathroomsVal) : null;
   const tenure  = document.getElementById('e-tenure').value;
 
   if (histIdx === 'new') {
@@ -1753,7 +1794,8 @@ function saveEdit() {
       price: a.price, payment: a.payment, tenant: a.tenant,
       lease_start: a.leaseStart || null,
       lease_end:   a.leaseEnd   || null,
-      history: a.history
+      history: a.history,
+      bedrooms: a.bedrooms, bathrooms: a.bathrooms
     })
   });
 
@@ -1792,6 +1834,7 @@ async function loadApartments() {
     apartments = [
       { id: 1, name: 'Unit 1A', address: '123 Demo Street', status: 'leased', price: 1500,
         payment: 'paid', tenant: 'Jane Demo', leaseStart: '2025-01-01', leaseEnd: '2026-01-01',
+        bedrooms: 2, bathrooms: 1,
         lease_docs: [], lease_doc: null,
         history: [
           { tenant: 'John Sample', price: 1300, from: '2023-01-01', to: '2024-01-01', tenure: 'long', current: false },
@@ -1801,6 +1844,7 @@ async function loadApartments() {
       },
       { id: 2, name: 'Unit 2A', address: '456 Sample Ave', status: 'leased', price: 2200,
         payment: 'paid', tenant: 'Alice Showcase', leaseStart: '2024-09-01', leaseEnd: '2026-09-01',
+        bedrooms: 3, bathrooms: 2,
         lease_docs: [], lease_doc: null,
         history: [
           { tenant: 'Alice Showcase', price: 2200, from: '2024-09-01', to: '2026-09-01', tenure: 'long', current: true }
@@ -1845,6 +1889,16 @@ function applyDemoRestrictions() {
   document.body.classList.add('demo-active');
   // Disable all action menu buttons
   document.querySelectorAll('.action-item').forEach(btn => btn.classList.add('btn-disabled'));
+  // Grey out bed/bath inputs in modals
+  ['f-bedrooms','f-bathrooms','e-bedrooms','e-bathrooms'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add('input-disabled');
+      el.setAttribute('placeholder', 'Upgrade to edit');
+      const wrap = el.closest('.form-group');
+      if (wrap) wrap.classList.add('input-disabled-wrap');
+    }
+  });
 }
 
 function showApp() {
@@ -2864,6 +2918,22 @@ checkAuth();</script>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Lease End</label><input class="form-input" id="e-end" type="date"></div>
         <div class="form-group"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:6px">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9V6a2 2 0 012-2h14a2 2 0 012 2v3"/><path d="M3 9h18v9H3z"/></svg>
+            Bedrooms
+          </label>
+          <input class="form-input" id="e-bedrooms" type="number" min="0" max="20" placeholder="e.g. 2">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:6px">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12h16v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6z"/><path d="M4 12V7a2 2 0 012-2h2a2 2 0 012 2v5"/></svg>
+            Bathrooms
+          </label>
+          <input class="form-input" id="e-bathrooms" type="number" min="0" max="20" step="0.5" placeholder="e.g. 1.5">
+        </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:8px">
         <button class="btn btn-outline" style="flex:1;padding:12px" onclick="closeModal('edit-modal')">Cancel</button>
