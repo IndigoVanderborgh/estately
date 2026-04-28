@@ -544,11 +544,44 @@
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
-<div id="login-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--cream);">
+<!-- PORTAL SELECTOR SCREEN -->
+<div id="portal-select-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--cream);">
+  <div style="width:100%;max-width:480px;padding:20px;">
+    <div style="text-align:center;margin-bottom:36px;">
+      <h1 style="font-family:'Playfair Display',serif;font-size:2.2rem;margin-bottom:6px">Estate<span style="color:var(--brown-mid)">ly</span></h1>
+      <p style="font-size:0.78rem;color:var(--text-mid);letter-spacing:1.5px;text-transform:uppercase">Select your portal to continue</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <!-- Property Manager Portal -->
+      <button onclick="showPortalLogin('manager')" style="background:var(--white);border:2px solid rgba(127,85,57,0.15);border-radius:20px;padding:32px 24px;cursor:pointer;text-align:center;transition:all 0.2s;box-shadow:0 4px 20px var(--shadow);font-family:inherit;" onmouseover="this.style.borderColor='var(--brown-mid)';this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 32px rgba(127,85,57,0.2)'" onmouseout="this.style.borderColor='rgba(127,85,57,0.15)';this.style.transform='translateY(0)';this.style.boxShadow='0 4px 20px var(--shadow)'">
+        <div style="width:52px;height:52px;background:var(--green-dark);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <svg width="24" height="24" fill="none" stroke="rgba(237,224,212,0.9)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+        </div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:600;color:var(--text-dark);margin-bottom:6px;">Property Manager</div>
+        <div style="font-size:0.76rem;color:var(--text-mid);line-height:1.5;">Manage properties, tenants & finances</div>
+      </button>
+      <!-- Tenant Portal -->
+      <button onclick="showPortalLogin('tenant')" style="background:var(--white);border:2px solid rgba(127,85,57,0.15);border-radius:20px;padding:32px 24px;cursor:pointer;text-align:center;transition:all 0.2s;box-shadow:0 4px 20px var(--shadow);font-family:inherit;" onmouseover="this.style.borderColor='var(--brown-mid)';this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 32px rgba(127,85,57,0.2)'" onmouseout="this.style.borderColor='rgba(127,85,57,0.15)';this.style.transform='translateY(0)';this.style.boxShadow='0 4px 20px var(--shadow)'">
+        <div style="width:52px;height:52px;background:var(--brown-dark);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <svg width="24" height="24" fill="none" stroke="rgba(237,224,212,0.9)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:600;color:var(--text-dark);margin-bottom:6px;">Tenant Portal</div>
+        <div style="font-size:0.76rem;color:var(--text-mid);line-height:1.5;">View your lease, payments & requests</div>
+      </button>
+    </div>
+    <p style="text-align:center;font-size:0.72rem;color:var(--text-mid);margin-top:28px;letter-spacing:0.5px;">© 2026 Estately</p>
+  </div>
+</div>
+
+<!-- PROPERTY MANAGER LOGIN SCREEN -->
+<div id="login-screen" style="display:none;align-items:center;justify-content:center;min-height:100vh;background:var(--cream);">
   <div style="background:var(--white);border-radius:20px;padding:40px;width:100%;max-width:380px;box-shadow:0 8px 40px var(--shadow);">
+    <button onclick="backToPortalSelect()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--text-mid);font-family:'DM Sans',sans-serif;font-size:0.8rem;margin-bottom:24px;padding:0;transition:color 0.2s;" onmouseover="this.style.color='var(--brown-dark)'" onmouseout="this.style.color='var(--text-mid)'">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to portals
+    </button>
     <h1 style="font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:4px">Estate<span style="color:var(--brown-mid)">ly</span></h1>
-    <p style="font-size:0.82rem;color:var(--text-mid);margin-bottom:28px;letter-spacing:1px;text-transform:uppercase">Property Manager</p>
+    <p style="font-size:0.82rem;color:var(--text-mid);margin-bottom:28px;letter-spacing:1px;text-transform:uppercase">Property Manager Portal</p>
     <div class="form-group">
       <label class="form-label">Email</label>
       <input class="form-input" id="login-email" type="email" placeholder="you@example.com">
@@ -563,8 +596,34 @@
   </div>
 </div>
 
+<!-- TENANT LOGIN SCREEN -->
+<div id="tenant-login-screen" style="display:none;align-items:center;justify-content:center;min-height:100vh;background:var(--cream);">
+  <div style="background:var(--white);border-radius:20px;padding:40px;width:100%;max-width:380px;box-shadow:0 8px 40px var(--shadow);">
+    <button onclick="backToPortalSelect()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--text-mid);font-family:'DM Sans',sans-serif;font-size:0.8rem;margin-bottom:24px;padding:0;transition:color 0.2s;" onmouseover="this.style.color='var(--brown-dark)'" onmouseout="this.style.color='var(--text-mid)'">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to portals
+    </button>
+    <div style="width:48px;height:48px;background:var(--brown-dark);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+      <svg width="22" height="22" fill="none" stroke="rgba(237,224,212,0.95)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <h1 style="font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:4px">Estate<span style="color:var(--brown-mid)">ly</span></h1>
+    <p style="font-size:0.82rem;color:var(--text-mid);margin-bottom:28px;letter-spacing:1px;text-transform:uppercase">Tenant Portal</p>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="tenant-email" type="email" placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="tenant-password" type="password" placeholder="••••••••">
+    </div>
+    <p id="tenant-login-error" style="color:#9b3535;font-size:0.82rem;margin-bottom:12px;display:none">Invalid email or password.</p>
+    <button class="btn" style="width:100%;padding:12px;font-size:0.95rem;background:var(--brown-dark);" onclick="document.getElementById('tenant-login-error').style.display='block'">Sign In</button>
+    <p style="text-align:center;font-size:0.76rem;color:var(--text-mid);margin-top:20px;">Contact your property manager if you need access.</p>
+  </div>
+</div>
+
 <!-- HAMBURGER TOP NAV -->
-<header class="topnav">
+<header class="topnav" style="display:none">
   <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMenu()" aria-label="Toggle menu">
     <span></span><span></span><span></span>
   </button>
@@ -1902,7 +1961,10 @@ function applyDemoRestrictions() {
 }
 
 function showApp() {
+  document.getElementById('portal-select-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('tenant-login-screen').style.display = 'none';
+  document.querySelector('.topnav').style.display = 'flex';
   document.querySelector('.sidebar').style.display = 'flex';
   document.querySelector('.main').style.display = 'block';
   loadApartments();
@@ -1911,13 +1973,29 @@ function showApp() {
 
 function checkAuth() {
   const token = localStorage.getItem('estately-token');
+  document.querySelector('.topnav').style.display = 'none';
+  document.querySelector('.sidebar').style.display = 'none';
+  document.querySelector('.main').style.display = 'none';
   if (token) {
     showApp();
   } else {
-    document.getElementById('login-screen').style.display = 'flex';
-    document.querySelector('.sidebar').style.display = 'none';
-    document.querySelector('.main').style.display = 'none';
+    document.getElementById('portal-select-screen').style.display = 'flex';
   }
+}
+
+function showPortalLogin(type) {
+  document.getElementById('portal-select-screen').style.display = 'none';
+  if (type === 'manager') {
+    document.getElementById('login-screen').style.display = 'flex';
+  } else {
+    document.getElementById('tenant-login-screen').style.display = 'flex';
+  }
+}
+
+function backToPortalSelect() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('tenant-login-screen').style.display = 'none';
+  document.getElementById('portal-select-screen').style.display = 'flex';
 }
 
 function demoLogin() {
