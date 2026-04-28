@@ -625,7 +625,10 @@
 
   <div id="view-dashboard">
     <div class="topbar">
-      <h2>Dashboard</h2>
+      <div>
+        <h2>Dashboard</h2>
+        <div id="topbar-subtitle" style="font-size:0.75rem;color:var(--text-mid);margin-top:2px"></div>
+      </div>
     </div>
     <div class="content">
       <div class="stats-row">
@@ -882,7 +885,30 @@
 
   <div id="view-maintenance" style="display:none">
     <div class="topbar"><h2>Maintenance</h2></div>
-    <div class="content"></div>
+    <div class="content">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px">
+        <div class="stat-card" style="padding:18px 22px">
+          <div class="stat-label" style="margin-bottom:6px">Open Tickets</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;color:#b84040" id="maint-open">0</div>
+          <div class="stat-sub">awaiting resolution</div>
+        </div>
+        <div class="stat-card" style="padding:18px 22px">
+          <div class="stat-label" style="margin-bottom:6px">In Progress</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;color:#2d5ba0" id="maint-progress">0</div>
+          <div class="stat-sub">being addressed</div>
+        </div>
+        <div class="stat-card" style="padding:18px 22px">
+          <div class="stat-label" style="margin-bottom:6px">Resolved</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;color:var(--green-dark)" id="maint-resolved">0</div>
+          <div class="stat-sub">closed tickets</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--text-dark)">Maintenance Log</div>
+        <button class="btn" onclick="openAddTicketModal()" style="font-size:0.82rem;padding:8px 16px">+ Log Issue</button>
+      </div>
+      <div id="maint-list"></div>
+    </div>
   </div>
 
 </div>
@@ -1065,7 +1091,7 @@ function renderGrid(id) {
   if(!grid) return;
   const list = currentFilter==='all' ? apartments : apartments.filter(a=>a.status===currentFilter);
   if(!list.length) {
-    grid.innerHTML=`<div class="empty-state"><svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><p>No apartments found.</p></div>`;
+    grid.innerHTML=`<div class="empty-state"><svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><p>No apartments found.</p><button class="btn" onclick="openAddModal()" style="margin-top:16px;padding:9px 22px">Add Your First Apartment</button></div>`;
     return;
   }
   const groups = {};
@@ -1113,6 +1139,13 @@ function updateStats() {
   document.getElementById('stat-vacant').textContent = apartments.filter(a=>a.status==='vacant').length;
   const rev = apartments.filter(a=>a.status!=='vacant').reduce((s,a)=>s+a.price,0);
   document.getElementById('stat-revenue').textContent = '$'+rev.toLocaleString();
+  // Topbar subtitle
+  const sub = document.getElementById('topbar-subtitle');
+  if (sub) {
+    const props = [...new Set(apartments.map(a=>a.address))].length;
+    const leased = apartments.filter(a=>a.status!=='vacant').length;
+    sub.textContent = props + ' propert' + (props!==1?'ies':'y') + ' · ' + apartments.length + ' unit' + (apartments.length!==1?'s':'') + ' · ' + leased + ' leased · $' + rev.toLocaleString() + '/mo';
+  }
   updateDashboardCharts();
 }
 
@@ -1361,20 +1394,146 @@ async function addApartment() {
 }
 
 // ── Payments table ─────────────────────────────────────────────
+let _ledgerFilter = 'all';
+let _ledgerSort   = { col: null, dir: 1 };
+
 function renderPaymentsTable() {
-  const rows = apartments.map(a=>`<tr>
-    <td><strong>${a.name}</strong></td>
-    <td>${a.address}</td>
-    <td>${a.status==='vacant'?'—':a.tenant}</td>
-    <td>${a.status==='vacant'?'—':ttBadge(inferTenure(a.history.find(h=>h.current)||{}))}</td>
-    <td>${a.status==='vacant'?'—':'$'+a.price.toLocaleString()}</td>
-    <td>${paymentPill(a.payment)}</td>
-  </tr>`).join('');
-  document.getElementById('payments-table-wrap').innerHTML=`
-    <table class="history-table" style="background:var(--white);border-radius:14px;overflow:hidden">
-      <thead><tr><th>Unit</th><th>Address</th><th>Tenant</th><th>Type</th><th>Rent</th><th>Payment</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+  const wrap = document.getElementById('payments-table-wrap');
+  if (!wrap) return;
+
+  // ── Summary stats ──
+  const active   = apartments.filter(a => a.status !== 'vacant');
+  const paid     = active.filter(a => a.payment === 'paid');
+  const unpaid   = active.filter(a => a.payment === 'unpaid');
+  const proc     = active.filter(a => a.payment === 'processing');
+  const totalCol = paid.reduce((s,a)=>s+a.price,0);
+  const totalOut = unpaid.reduce((s,a)=>s+a.price,0);
+
+  // ── Filter ──
+  let list = [...apartments];
+  if (_ledgerFilter === 'paid')       list = apartments.filter(a => a.payment === 'paid');
+  else if (_ledgerFilter === 'unpaid')     list = apartments.filter(a => a.payment === 'unpaid');
+  else if (_ledgerFilter === 'processing') list = apartments.filter(a => a.payment === 'processing');
+  else if (_ledgerFilter === 'vacant')     list = apartments.filter(a => a.status === 'vacant');
+
+  // ── Sort ──
+  if (_ledgerSort.col) {
+    list = [...list].sort((a, b) => {
+      let av, bv;
+      if (_ledgerSort.col === 'unit')    { av = a.name;    bv = b.name; }
+      if (_ledgerSort.col === 'tenant')  { av = a.tenant;  bv = b.tenant; }
+      if (_ledgerSort.col === 'rent')    { av = a.price;   bv = b.price; }
+      if (_ledgerSort.col === 'status')  { av = a.payment; bv = b.payment; }
+      if (typeof av === 'string') return av.localeCompare(bv) * _ledgerSort.dir;
+      return (av - bv) * _ledgerSort.dir;
+    });
+  }
+
+  function sortIcon(col) {
+    if (_ledgerSort.col !== col) return `<svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:0.3;margin-left:4px;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg>`;
+    return _ledgerSort.dir === 1
+      ? `<svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-left:4px;vertical-align:middle;color:var(--brown-dark)"><polyline points="6 9 12 15 18 9"/></svg>`
+      : `<svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-left:4px;vertical-align:middle;color:var(--brown-dark)"><polyline points="18 15 12 9 6 15"/></svg>`;
+  }
+
+  function filterTab(val, label) {
+    const active = _ledgerFilter === val;
+    return `<button class="tab${active?' active':''}" onclick="setLedgerFilter('${val}')" style="font-size:0.8rem;padding:6px 14px">${label}</button>`;
+  }
+
+  const rows = list.map(a => {
+    const isVacant = a.status === 'vacant';
+    const canMark  = !isVacant && !isDemo();
+    const markBtn  = canMark
+      ? (a.payment === 'paid'
+          ? `<button class="btn btn-outline" style="padding:3px 10px;font-size:0.72rem;white-space:nowrap" onclick="ledgerSetPayment(${a.id},'unpaid')">Mark Unpaid</button>`
+          : `<button class="btn" style="padding:3px 10px;font-size:0.72rem;white-space:nowrap;background:var(--green-mid)" onclick="ledgerSetPayment(${a.id},'paid')">Mark Paid</button>`)
+      : '';
+    return `<tr>
+      <td><strong>${a.name}</strong><div style="font-size:0.73rem;color:var(--text-mid);margin-top:1px">${a.address}</div></td>
+      <td>${isVacant ? '<span style="color:var(--text-mid)">Vacant</span>' : a.tenant}</td>
+      <td>${isVacant ? '—' : ttBadge(inferTenure(a.history.find(h=>h.current)||{}))}</td>
+      <td style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;color:var(--green-dark)">${isVacant ? '—' : '$'+a.price.toLocaleString()}</td>
+      <td>${paymentPill(a.payment)}</td>
+      <td style="text-align:right">${markBtn}</td>
+    </tr>`;
+  }).join('');
+
+  const emptyRow = list.length === 0
+    ? `<tr><td colspan="6" style="text-align:center;padding:36px;color:var(--text-mid);font-style:italic">No entries match this filter.</td></tr>`
+    : '';
+
+  wrap.innerHTML = `
+    <!-- Summary strip -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+      <div class="stat-card" style="padding:18px 22px">
+        <div class="stat-label" style="margin-bottom:6px">Collected</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;color:var(--green-dark)">$${totalCol.toLocaleString()}</div>
+        <div class="stat-sub">${paid.length} unit${paid.length!==1?'s':''} paid</div>
+      </div>
+      <div class="stat-card" style="padding:18px 22px">
+        <div class="stat-label" style="margin-bottom:6px">Outstanding</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;color:#b84040">$${totalOut.toLocaleString()}</div>
+        <div class="stat-sub">${unpaid.length} unit${unpaid.length!==1?'s':''} unpaid</div>
+      </div>
+      <div class="stat-card" style="padding:18px 22px">
+        <div class="stat-label" style="margin-bottom:6px">Processing</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;color:#2d5ba0">${proc.length}</div>
+        <div class="stat-sub">payment${proc.length!==1?'s':''} in transit</div>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${filterTab('all','All Units')}
+        ${filterTab('paid','Paid')}
+        ${filterTab('unpaid','Unpaid')}
+        ${filterTab('processing','Processing')}
+        ${filterTab('vacant','Vacant')}
+      </div>
+      <div style="font-size:0.78rem;color:var(--text-mid)">${list.length} unit${list.length!==1?'s':''} shown</div>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto">
+      <table class="history-table" style="background:var(--white);border-radius:14px;overflow:hidden">
+        <thead><tr>
+          <th style="cursor:pointer" onclick="ledgerSort('unit')">Unit ${sortIcon('unit')}</th>
+          <th style="cursor:pointer" onclick="ledgerSort('tenant')">Tenant ${sortIcon('tenant')}</th>
+          <th>Type</th>
+          <th style="cursor:pointer" onclick="ledgerSort('rent')">Rent ${sortIcon('rent')}</th>
+          <th style="cursor:pointer" onclick="ledgerSort('status')">Status ${sortIcon('status')}</th>
+          <th style="text-align:right">Action</th>
+        </tr></thead>
+        <tbody>${rows}${emptyRow}</tbody>
+      </table>
+    </div>`;
+}
+
+function setLedgerFilter(f) {
+  _ledgerFilter = f;
+  renderPaymentsTable();
+}
+
+function ledgerSort(col) {
+  if (_ledgerSort.col === col) _ledgerSort.dir *= -1;
+  else { _ledgerSort.col = col; _ledgerSort.dir = 1; }
+  renderPaymentsTable();
+}
+
+async function ledgerSetPayment(id, status) {
+  const a = apartments.find(x => x.id === id);
+  if (!a) return;
+  a.payment = status;
+  if (!isDemo()) {
+    await fetch(`${API}/apartments/${id}`, {
+      method: 'PUT', headers: getHeaders(),
+      body: JSON.stringify({ payment: status })
+    });
+  }
+  updateStats();
+  renderPaymentsTable();
 }
 
 // ── View switching ─────────────────────────────────────────────
@@ -1404,6 +1563,7 @@ function showView(v, el) {
   if(v==='dashboard') updateDashboardCharts();
   if(v==='history')   renderHistoryPropertyList();
   if(v==='analytics') renderAnalyticsPropertyList();
+  if(v==='maintenance') renderMaintenanceView();
   closeMenu();
 }
 
@@ -2043,6 +2203,9 @@ toggleDark = function() {
 let _historyCharts = [];
 let _selectedHistoryAddress = null;
 
+let _historySearch = '';
+let _historyTypeFilter = 'all';
+
 function renderHistoryPropertyList() {
   const addresses = [...new Set(apartments.map(a => a.address))];
   const container = document.getElementById('history-property-list');
@@ -2055,7 +2218,6 @@ function renderHistoryPropertyList() {
     const isSelected = addr === _selectedHistoryAddress;
     return `<button class="tab${isSelected ? ' active' : ''}" style="font-size:0.82rem;padding:7px 18px" onclick="selectHistoryProperty('${addr.replace(/'/g,"\\'")}',this)">${addr}</button>`;
   }).join('');
-  // Auto-select if previous selection still valid
   if (_selectedHistoryAddress && addresses.includes(_selectedHistoryAddress)) {
     renderHistoryForProperty(_selectedHistoryAddress);
   } else {
@@ -2074,7 +2236,6 @@ function renderHistoryForProperty(addr) {
   const units = apartments.filter(a => a.address === addr);
   if (!units.length) return;
 
-  // Destroy old history charts
   _historyCharts.forEach(c => { try { c.destroy(); } catch(e) {} });
   _historyCharts = [];
 
@@ -2086,43 +2247,105 @@ function renderHistoryForProperty(addr) {
     short: allHistory.filter(h => inferTenure(h) === 'short').length
   };
 
+  // Aggregate stats
+  const durations = allHistory.map(h => {
+    if (!h.from) return 0;
+    const end = h.to ? new Date(h.to+'T00:00:00') : new Date();
+    return (end - new Date(h.from+'T00:00:00')) / (30.44*24*60*60*1000);
+  }).filter(d=>d>0);
+  const avgDur = durations.length ? durations.reduce((a,b)=>a+b,0)/durations.length : 0;
+  const avgDurStr = avgDur < 1 ? '< 1 mo' : avgDur < 12 ? Math.round(avgDur)+' mo' : Math.floor(avgDur/12)+'y '+(Math.round(avgDur%12)||'')+'m';
+  const churnCount = allHistory.filter(h => h.to && !h.current).length;
+  const churnRate  = allHistory.length > 0 ? Math.round(churnCount / allHistory.length * 100) : 0;
+  const avgRent = allHistory.length ? Math.round(allHistory.reduce((s,h)=>s+(h.price||0),0)/allHistory.length) : 0;
+
   const container = document.getElementById('history-content');
 
-  let html = `<div style="margin-bottom:6px">
+  let html = `<div style="margin-bottom:20px">
     <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--text-dark);margin-bottom:4px">${addr}</div>
     <div style="font-size:0.8rem;color:var(--text-mid)">${units.length} unit${units.length!==1?'s':''} · ${tc.total} total tenant record${tc.total!==1?'s':''}</div>
   </div>`;
 
-  html += `<div class="section-divider" style="margin-top:24px">Tenant &amp; Lease History</div>`;
+  // ── Aggregate stat strip ──
   if (hasHistory) {
-    const histRows = allHistory.map((h, idx) => {
-      const t = inferTenure(h);
-      const unitId = h.unitId;
-      // Find the real index of this entry in the apartment's history array
-      const apt = apartments.find(a => a.id === unitId);
-      const realIdx = apt ? apt.history.indexOf(h) : idx;
-      const disabledClass = isDemo() ? 'btn-disabled' : '';
-      return `<tr class="${h.current?'current-row':''}">
-        <td><strong>${h.unitName}</strong></td>
-        <td>${h.tenant}</td>
-        <td>$${h.price.toLocaleString()}/mo</td>
-        <td>${formatDate(h.from)}</td>
-        <td>${formatDate(h.to)}</td>
-        <td>${tenureDuration(h)}</td>
-        <td>${ttBadge(t)}</td>
-        <td>${h.current?'<span class="status-badge status-leased" style="font-size:0.7rem">Current</span>':'<span style="color:var(--text-mid);font-size:0.82rem">Ended</span>'}</td>
-        <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          <button class="btn btn-outline" style="padding:4px 10px;font-size:0.72rem" onclick="historyViewDetail(${unitId},${realIdx})">View</button>
-          <button class="btn btn-outline ${disabledClass}" style="padding:4px 10px;font-size:0.72rem" onclick="historyEditTenantRow(${unitId},${realIdx})">Edit</button>
-          <button class="btn btn-remove ${disabledClass}" style="padding:4px 10px;font-size:0.72rem" onclick="historyDeleteTenantRow(${unitId},${realIdx})">Delete</button>
-        </td>
-      </tr>`;
-    }).join('');
-    html += `<div style="overflow-x:auto"><table class="history-table">
-      <thead><tr><th>Unit</th><th>Tenant</th><th>Rent</th><th>Start</th><th>End</th><th>Duration</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody>${histRows}</tbody>
-    </table></div>`;
-    // Add Tenant button below the table
+    html += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
+      <div class="stat-card" style="padding:14px 18px">
+        <div class="stat-label" style="margin-bottom:4px">Avg. Tenure</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--green-dark)">${avgDurStr}</div>
+        <div class="stat-sub">across ${allHistory.length} record${allHistory.length!==1?'s':''}</div>
+      </div>
+      <div class="stat-card" style="padding:14px 18px">
+        <div class="stat-label" style="margin-bottom:4px">Avg. Rent</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--text-dark)">$${avgRent.toLocaleString()}</div>
+        <div class="stat-sub">historical average</div>
+      </div>
+      <div class="stat-card" style="padding:14px 18px">
+        <div class="stat-label" style="margin-bottom:4px">Churn Rate</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:${churnRate>60?'#b84040':'var(--text-dark)'}">${churnRate}%</div>
+        <div class="stat-sub">${churnCount} of ${allHistory.length} tenants ended</div>
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="section-divider" style="margin-top:0">Tenant &amp; Lease History</div>`;
+
+  if (hasHistory) {
+    // ── Search + filter bar ──
+    const addrEsc = addr.split("'").join("\\'");
+    html += `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      <div style="position:relative;flex:1;min-width:180px">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:0.4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="form-input" id="history-search" style="padding-left:32px;height:36px;font-size:0.85rem" placeholder="Search tenant or unit..." value="${_historySearch}" oninput="_historySearch=this.value;renderHistoryForProperty('${addrEsc}')">
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="tab${_historyTypeFilter==='all'?' active':''}" style="font-size:0.78rem;padding:5px 12px" onclick="_historyTypeFilter='all';renderHistoryForProperty('${addrEsc}')">All</button>
+        <button class="tab${_historyTypeFilter==='long'?' active':''}" style="font-size:0.78rem;padding:5px 12px" onclick="_historyTypeFilter='long';renderHistoryForProperty('${addrEsc}')">Long-Term</button>
+        <button class="tab${_historyTypeFilter==='short'?' active':''}" style="font-size:0.78rem;padding:5px 12px" onclick="_historyTypeFilter='short';renderHistoryForProperty('${addrEsc}')">Short-Term</button>
+        <button class="tab${_historyTypeFilter==='current'?' active':''}" style="font-size:0.78rem;padding:5px 12px" onclick="_historyTypeFilter='current';renderHistoryForProperty('${addrEsc}')">Current</button>
+      </div>
+    </div>`;
+
+    // Apply filters
+    let filtered = allHistory;
+    if (_historySearch) {
+      const q = _historySearch.toLowerCase();
+      filtered = filtered.filter(h => h.tenant.toLowerCase().includes(q) || h.unitName.toLowerCase().includes(q));
+    }
+    if (_historyTypeFilter === 'long')    filtered = filtered.filter(h => inferTenure(h) === 'long');
+    if (_historyTypeFilter === 'short')   filtered = filtered.filter(h => inferTenure(h) === 'short');
+    if (_historyTypeFilter === 'current') filtered = filtered.filter(h => h.current);
+
+    if (filtered.length === 0) {
+      html += `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:10px 0">No records match your search.</p>`;
+    } else {
+      const histRows = filtered.map((h) => {
+        const t = inferTenure(h);
+        const unitId = h.unitId;
+        const apt = apartments.find(a => a.id === unitId);
+        const realIdx = apt ? apt.history.indexOf(h) : -1;
+        const disabledClass = isDemo() ? 'btn-disabled' : '';
+        return `<tr class="${h.current?'current-row':''}">
+          <td><strong>${h.unitName}</strong></td>
+          <td>${h.tenant}</td>
+          <td>$${h.price.toLocaleString()}/mo</td>
+          <td>${formatDate(h.from)}</td>
+          <td>${formatDate(h.to)}</td>
+          <td>${tenureDuration(h)}</td>
+          <td>${ttBadge(t)}</td>
+          <td>${h.current?'<span class="status-badge status-leased" style="font-size:0.7rem">Current</span>':'<span style="color:var(--text-mid);font-size:0.82rem">Ended</span>'}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-outline" style="padding:4px 10px;font-size:0.72rem" onclick="historyViewDetail(${unitId},${realIdx})">View</button>
+            <button class="btn btn-outline ${disabledClass}" style="padding:4px 10px;font-size:0.72rem" onclick="historyEditTenantRow(${unitId},${realIdx})">Edit</button>
+            <button class="btn btn-remove ${disabledClass}" style="padding:4px 10px;font-size:0.72rem" onclick="historyDeleteTenantRow(${unitId},${realIdx})">Delete</button>
+          </td>
+        </tr>`;
+      }).join('');
+      html += `<div style="overflow-x:auto"><table class="history-table">
+        <thead><tr><th>Unit</th><th>Tenant</th><th>Rent</th><th>Start</th><th>End</th><th>Duration</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${histRows}</tbody>
+      </table></div>`;
+    }
+
     const firstUnitId = units[0]?.id;
     html += `<div style="display:flex;justify-content:flex-end;margin-top:14px">
       <button class="btn ${isDemo()?'btn-disabled':''}" onclick="historyAddTenant(${firstUnitId})">+ Add Tenant</button>
@@ -2138,8 +2361,6 @@ function renderHistoryForProperty(addr) {
   }
 
   container.innerHTML = html;
-
-  // Charts are now rendered in Analytics tab
 }
 
 
@@ -2231,9 +2452,61 @@ function renderAnalyticsPropertyList() {
   list.innerHTML = addresses.map(addr =>
     `<button class="tab${_selectedAnalyticsAddress===addr?' active':''}" onclick="selectAnalyticsProperty('${addr.replace(/'/g,"\\'")}',this)">${addr}</button>`
   ).join('');
+  renderAnalyticsPortfolioSummary();
   if (_selectedAnalyticsAddress && addresses.includes(_selectedAnalyticsAddress)) {
     renderAnalyticsForProperty(_selectedAnalyticsAddress);
   }
+}
+
+function renderAnalyticsPortfolioSummary() {
+  const existing = document.getElementById('analytics-portfolio-strip');
+  if (existing) existing.remove();
+  if (!apartments.length) return;
+
+  const allHistory = apartments.flatMap(a => a.history);
+  const active = apartments.filter(a => a.status !== 'vacant');
+  const totalRev = active.reduce((s,a)=>s+a.price,0);
+  const avgRent  = active.length ? Math.round(totalRev / active.length) : 0;
+  const vacancyRate = apartments.length ? Math.round((apartments.filter(a=>a.status==='vacant').length / apartments.length)*100) : 0;
+  const ended = allHistory.filter(h => h.to && !h.current).length;
+  const churnRate = allHistory.length > 1 ? Math.round((ended / allHistory.length)*100) : 0;
+  const growthArr = apartments.map(a => {
+    if (a.history.length < 2) return null;
+    const sorted = [...a.history].filter(h=>h.price).sort((x,y)=>(x.from||'').localeCompare(y.from||''));
+    const first = sorted[0]?.price, last = sorted[sorted.length-1]?.price;
+    if (!first || !last) return null;
+    return ((last - first) / first) * 100;
+  }).filter(v => v !== null);
+  const avgGrowth = growthArr.length ? (growthArr.reduce((a,b)=>a+b,0)/growthArr.length).toFixed(1) : null;
+
+  const strip = document.createElement('div');
+  strip.id = 'analytics-portfolio-strip';
+  strip.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px">
+      <div class="stat-card" style="padding:18px 22px">
+        <div class="stat-label" style="margin-bottom:6px">Total Revenue</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--green-dark)">$${totalRev.toLocaleString()}/mo</div>
+        <div class="stat-sub">${active.length} active unit${active.length!==1?'s':''}</div>
+      </div>
+      <div class="stat-card" style="padding:18px 22px">
+        <div class="stat-label" style="margin-bottom:6px">Avg. Rent</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--text-dark)">$${avgRent.toLocaleString()}</div>
+        <div class="stat-sub">per occupied unit</div>
+      </div>
+      <div class="stat-card" style="padding:18px 22px">
+        <div class="stat-label" style="margin-bottom:6px">Vacancy Rate</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:${vacancyRate>20?'#b84040':'var(--text-dark)'}">${vacancyRate}%</div>
+        <div class="stat-sub">portfolio-wide</div>
+      </div>
+      <div class="stat-card" style="padding:18px 22px">
+        <div class="stat-label" style="margin-bottom:6px">${avgGrowth !== null ? 'Avg. Rent Growth' : 'Tenant Churn'}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:${avgGrowth!==null?(parseFloat(avgGrowth)>=0?'var(--green-dark)':'#b84040'):'var(--text-dark)'}">${avgGrowth !== null ? (parseFloat(avgGrowth)>=0?'+':'')+avgGrowth+'%' : churnRate+'%'}</div>
+        <div class="stat-sub">${avgGrowth !== null ? 'first → latest tenant' : 'tenants ended vs total'}</div>
+      </div>
+    </div>`;
+
+  const contentEl = document.getElementById('analytics-content');
+  contentEl.parentNode.insertBefore(strip, contentEl);
 }
 
 function selectAnalyticsProperty(addr, el) {
@@ -2257,6 +2530,15 @@ function renderAnalyticsForProperty(addr) {
     long:  allHistory.filter(h => inferTenure(h) === 'long').length,
     short: allHistory.filter(h => inferTenure(h) === 'short').length
   };
+
+  // Per-unit rent growth
+  const rentGrowthRows = units.map(a => {
+    const sorted = [...a.history].filter(h=>h.price&&h.from).sort((x,y)=>x.from.localeCompare(y.from));
+    if (sorted.length < 2) return null;
+    const first = sorted[0].price, last = sorted[sorted.length-1].price;
+    const pct = ((last - first) / first * 100).toFixed(1);
+    return { name: a.name, first, last, pct };
+  }).filter(Boolean);
 
   const container = document.getElementById('analytics-content');
 
@@ -2299,6 +2581,44 @@ function renderAnalyticsForProperty(addr) {
     html += `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:10px 0">No tenant history recorded yet.</p>`;
   }
 
+  // ── RENT GROWTH PER UNIT ──
+  if (rentGrowthRows.length) {
+    html += `<div class="section-divider" style="margin-top:24px">Rent Growth by Unit</div>`;
+    html += `<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:8px">`;
+    rentGrowthRows.forEach(r => {
+      const pos = parseFloat(r.pct) >= 0;
+      const barW = Math.min(Math.abs(parseFloat(r.pct)) * 2, 100);
+      html += `<div style="background:var(--cream);border-radius:10px;padding:12px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:0.85rem;font-weight:600;color:var(--text-dark)">${r.name}</span>
+          <span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:${pos?'var(--green-dark)':'#b84040'}">${pos?'+':''}${r.pct}%</span>
+        </div>
+        <div style="height:6px;border-radius:4px;background:rgba(127,85,57,0.1);overflow:hidden">
+          <div style="height:100%;width:${barW}%;border-radius:4px;background:${pos?'var(--green-mid)':'#c0392b'};transition:width 0.6s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-mid);margin-top:4px">
+          <span>First: $${r.first.toLocaleString()}</span><span>Latest: $${r.last.toLocaleString()}</span>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // ── VACANCY TIMELINE (Gantt) ──
+  html += `<div class="section-divider" style="margin-top:24px">Occupancy Timeline</div>`;
+  if (hasHistory) {
+    html += `<div class="chart-wrap" style="margin-bottom:8px;padding:16px 20px 8px">
+      <div id="analytics-gantt" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div style="display:flex;gap:16px;margin-top:12px;font-size:0.72rem;color:var(--text-mid)">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:10px;border-radius:3px;background:#656d4a;display:inline-block"></span>Occupied (Long-term)</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:10px;border-radius:3px;background:#e8a838;display:inline-block"></span>Occupied (Short-term)</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:10px;border-radius:3px;background:rgba(127,85,57,0.1);display:inline-block"></span>Vacant</span>
+      </div>
+    </div>`;
+  } else {
+    html += `<p style="color:var(--text-mid);font-style:italic;font-size:0.85rem;padding:10px 0">No history to display timeline.</p>`;
+  }
+
   // ── RENT PRICE HISTORY ──
   html += `<div class="section-divider" style="margin-top:24px">Rent Price History</div>`;
   if (hasHistory) {
@@ -2310,6 +2630,37 @@ function renderAnalyticsForProperty(addr) {
   container.innerHTML = html;
 
   if (hasHistory) {
+    // Build Gantt
+    const ganttEl = document.getElementById('analytics-gantt');
+    if (ganttEl) {
+      // Determine date range across all history
+      const allDates = allHistory.flatMap(h => [h.from, h.to]).filter(Boolean).map(d => new Date(d+'T00:00:00'));
+      const minDate = allDates.length ? new Date(Math.min(...allDates)) : new Date();
+      const maxDate = allDates.length ? new Date(Math.max(...allDates, Date.now())) : new Date();
+      const totalMs = maxDate - minDate || 1;
+
+      ganttEl.innerHTML = units.map(unit => {
+        const bars = unit.history.filter(h => h.from).map(h => {
+          const start = new Date(h.from+'T00:00:00');
+          const end   = h.to ? new Date(h.to+'T00:00:00') : new Date();
+          const left  = ((start - minDate) / totalMs * 100).toFixed(1);
+          const width = ((end - start) / totalMs * 100).toFixed(1);
+          const color = inferTenure(h) === 'short' ? '#e8a838' : '#656d4a';
+          const tip   = `${h.tenant} · $${h.price?.toLocaleString()}/mo · ${tenureDuration(h)}`;
+          return `<div style="position:absolute;top:0;left:${left}%;width:${Math.max(parseFloat(width),0.5)}%;height:100%;background:${color};border-radius:3px;cursor:default" title="${tip}"></div>`;
+        }).join('');
+
+        return `<div style="display:flex;align-items:center;gap:10px">
+          <div style="width:80px;font-size:0.78rem;font-weight:500;color:var(--text-mid);text-align:right;flex-shrink:0">${unit.name}</div>
+          <div style="flex:1;height:22px;background:rgba(127,85,57,0.1);border-radius:4px;position:relative;overflow:hidden">${bars}</div>
+        </div>`;
+      }).join('');
+
+      // Date labels
+      const fmtShort = d => d.toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+      ganttEl.insertAdjacentHTML('afterend', `<div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text-mid);margin-top:4px;padding:0 90px 0 90px"><span>${fmtShort(minDate)}</span><span>${fmtShort(maxDate)}</span></div>`);
+    }
+
     requestAnimationFrame(() => {
       const dCtx = document.getElementById('analytics-donutChart');
       if (dCtx) {
@@ -2346,6 +2697,76 @@ function renderAnalyticsForProperty(addr) {
     });
   }
 }
+
+// ── Maintenance ─────────────────────────────────────────────────
+let _tickets = JSON.parse(localStorage.getItem('estately-tickets') || '[]');
+
+function saveTickets() {
+  localStorage.setItem('estately-tickets', JSON.stringify(_tickets));
+}
+
+function renderMaintenanceView() {
+  const open     = _tickets.filter(t => t.status === 'open').length;
+  const progress = _tickets.filter(t => t.status === 'progress').length;
+  const resolved = _tickets.filter(t => t.status === 'resolved').length;
+  document.getElementById('maint-open').textContent     = open;
+  document.getElementById('maint-progress').textContent = progress;
+  document.getElementById('maint-resolved').textContent = resolved;
+
+  const list = document.getElementById('maint-list');
+  if (!_tickets.length) {
+    list.innerHTML = `<div class="empty-state" style="padding:50px 0">
+      <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      <p>No maintenance tickets yet.</p>
+      <button class="btn" onclick="openAddTicketModal()" style="margin-top:16px;padding:9px 22px">Log Your First Issue</button>
+    </div>`;
+    return;
+  }
+  const statusMap = { open: ['Open','expiry-urgent'], progress: ['In Progress','expiry-warn'], resolved: ['Resolved','expiry-ok'] };
+  list.innerHTML = `<div style="overflow-x:auto"><table class="history-table" style="background:var(--white);border-radius:14px;overflow:hidden">
+    <thead><tr><th>Unit</th><th>Issue</th><th>Priority</th><th>Date</th><th>Status</th><th style="text-align:right">Action</th></tr></thead>
+    <tbody>${_tickets.slice().reverse().map((t,ri) => {
+      const idx = _tickets.length - 1 - ri;
+      const [sLabel, sCls] = statusMap[t.status] || ['Open','expiry-urgent'];
+      const prioColor = t.priority==='high'?'#b84040':t.priority==='medium'?'#9c6b1b':'var(--text-mid)';
+      return `<tr>
+        <td><strong>${t.unit}</strong></td>
+        <td style="max-width:220px">${t.issue}</td>
+        <td style="color:${prioColor};font-weight:600;text-transform:capitalize">${t.priority}</td>
+        <td>${t.date}</td>
+        <td><span class="expiry-badge ${sCls}">${sLabel}</span></td>
+        <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+          ${t.status !== 'resolved' ? `<button class="btn" style="padding:3px 10px;font-size:0.72rem;background:var(--green-mid)" onclick="ticketResolve(${idx})">Resolve</button>` : ''}
+          ${t.status === 'open' ? `<button class="btn btn-outline" style="padding:3px 10px;font-size:0.72rem" onclick="ticketProgress(${idx})">In Progress</button>` : ''}
+          <button class="btn btn-remove" style="padding:3px 10px;font-size:0.72rem" onclick="ticketDelete(${idx})">Delete</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function openAddTicketModal() {
+  document.getElementById('ticket-modal').classList.add('open');
+  // Populate unit selector
+  const sel = document.getElementById('ticket-unit');
+  sel.innerHTML = apartments.map(a=>`<option value="${a.name} – ${a.address}">${a.name} · ${a.address}</option>`).join('');
+}
+
+function addTicket() {
+  const unit     = document.getElementById('ticket-unit').value;
+  const issue    = document.getElementById('ticket-issue').value.trim();
+  const priority = document.getElementById('ticket-priority').value;
+  if (!unit || !issue) { alert('Please fill in unit and issue.'); return; }
+  _tickets.push({ unit, issue, priority, status: 'open', date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) });
+  saveTickets();
+  closeModal('ticket-modal');
+  document.getElementById('ticket-issue').value = '';
+  renderMaintenanceView();
+}
+
+function ticketResolve(idx)  { _tickets[idx].status = 'resolved'; saveTickets(); renderMaintenanceView(); }
+function ticketProgress(idx) { _tickets[idx].status = 'progress'; saveTickets(); renderMaintenanceView(); }
+function ticketDelete(idx)   { _tickets.splice(idx, 1); saveTickets(); renderMaintenanceView(); }
 
 checkAuth();</script>
 <!-- REMOVE MODAL -->
@@ -2447,6 +2868,38 @@ checkAuth();</script>
       <div style="display:flex;gap:10px;margin-top:8px">
         <button class="btn btn-outline" style="flex:1;padding:12px" onclick="closeModal('edit-modal')">Cancel</button>
         <button class="btn" style="flex:2;padding:12px;font-size:0.95rem" onclick="saveEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TICKET MODAL -->
+<div class="modal-overlay" id="ticket-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <div class="modal-title">Log Maintenance Issue</div>
+      <button class="modal-close" onclick="closeModal('ticket-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Unit</label>
+        <select class="form-input" id="ticket-unit"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Issue Description</label>
+        <textarea class="form-input" id="ticket-issue" rows="3" placeholder="e.g. Leaking faucet in bathroom" style="resize:vertical"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <select class="form-input" id="ticket-priority">
+          <option value="low">Low — cosmetic or minor</option>
+          <option value="medium" selected>Medium — needs attention soon</option>
+          <option value="high">High — urgent repair needed</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-outline" style="flex:1;padding:11px" onclick="closeModal('ticket-modal')">Cancel</button>
+        <button class="btn" style="flex:2;padding:11px;font-size:0.95rem" onclick="addTicket()">Log Issue</button>
       </div>
     </div>
   </div>
